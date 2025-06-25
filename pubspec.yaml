@@ -17,6 +17,7 @@ dependencies: # ✅ Đặt ở đây (cùng cấp với flutter)
   url_launcher: ^6.3.1
   mailer: ^6.0.1
   random_string: ^2.3.1
+  pinput: ^4.0.0
   
 
 dev_dependencies:
