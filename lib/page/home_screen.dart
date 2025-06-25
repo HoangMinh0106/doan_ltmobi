@@ -28,7 +28,7 @@ class HomeScreen extends StatelessWidget {
       ),
       body: const Center(
         child: Text(
-          'Hà Minh Luân Quá Ngu trong việc chạy code',
+          'Chào mừng đến trang chủ',
           style: TextStyle(fontSize: 24),
         ),
       ),
