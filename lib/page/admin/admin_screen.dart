@@ -1,5 +1,6 @@
-import 'package:doan_ltmobi/page/admin/user_management_screen.dart'; // Import màn hình mới
-import 'package:doan_ltmobi/page/admin/category_management_screen.dart'; // Import màn hình mới
+import 'package:doan_ltmobi/page/admin/user_management_screen.dart';
+import 'package:doan_ltmobi/page/admin/category_management_screen.dart';
+import 'package:doan_ltmobi/page/admin/product_management_screen.dart'; // <-- THÊM DÒNG NÀY
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -74,7 +75,6 @@ class AdminScreen extends StatelessWidget {
               title: 'Quản lý người dùng',
               color: Colors.blue,
               onTap: () {
-                // Điều hướng đến trang quản lý người dùng
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const UserManagementScreen()),
@@ -97,18 +97,22 @@ class AdminScreen extends StatelessWidget {
               context: context,
               icon: Icons.image_outlined,
               title: 'Quản lý Banner',
-              color: Colors.green,
+              color: Colors.teal, // Đổi màu cho đẹp hơn
               onTap: () {
                 // TODO: Thêm logic điều hướng đến trang quản lý banner
               },
             ),
              _buildDashboardCard(
               context: context,
-              icon: Icons.category_outlined,
+              icon: Icons.shopping_bag_outlined, // Đổi icon cho phù hợp
               title: 'Quản lý sản phẩm',
               color: Colors.orange,
               onTap: () {
-                // TODO: Thêm logic điều hướng đến trang quản lý sản phẩm
+                // ===== THAY ĐỔI Ở ĐÂY =====
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProductManagementScreen()),
+                );
               },
             ),
              _buildDashboardCard(
