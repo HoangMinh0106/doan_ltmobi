@@ -32,7 +32,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   Timer? _timer;
 
   // ---- CITY ----
-  String _currentCity = 'Hồ Chí Minh';
+  String _currentCity = 'Vui lòng chọn địa chỉ của bạn';
 
   // --- UI CONSTANTS ---
   static const Color primaryColor = Color(0xFFE57373);
@@ -117,7 +117,6 @@ class _HomePageBodyState extends State<HomePageBody> {
   }
 
   Widget _buildPromoSlider() {
-    // ... (Phần này không thay đổi)
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bannersFuture,
       builder: (context, snap) {
@@ -196,9 +195,32 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
-  Widget _buildCategorySection() {
-    // ... (Phần này không thay đổi)
-    return Column(
+  Widget _buildCategoryItem(String name, String? img) => Container(
+        width: 90,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          children: [
+            Container(
+              height: 70,
+              width: 70,
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                  color: Color(0xFFFFF0F0), shape: BoxShape.circle),
+              child: img != null && img.isNotEmpty
+                  ? Image.network(img, fit: BoxFit.contain)
+                  : const Icon(Icons.category,
+                      size: 35, color: primaryColor),
+            ),
+            const SizedBox(height: 8),
+            Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
+          ],
+        ),
+      );
+
+  Widget _buildCategorySection() => Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -239,35 +261,6 @@ class _HomePageBodyState extends State<HomePageBody> {
           ),
         ],
       );
-  }
-
-  Widget _buildCategoryItem(String name, String? img) {
-    // ... (Phần này không thay đổi)
-    return Container(
-        width: 90,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          children: [
-            Container(
-              height: 70,
-              width: 70,
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                  color: Color(0xFFFFF0F0), shape: BoxShape.circle),
-              child: img != null && img.isNotEmpty
-                  ? Image.network(img, fit: BoxFit.contain)
-                  : const Icon(Icons.category,
-                      size: 35, color: primaryColor),
-            ),
-            const SizedBox(height: 8),
-            Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
-          ],
-        ),
-      );
-  }
 
   /* ============== BUILD ============== */
   @override
@@ -276,14 +269,14 @@ class _HomePageBodyState extends State<HomePageBody> {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          // ===== THAY ĐỔI CHÍNH NẰM Ở ĐÂY =====
-          // -------- Header Avatar + City (ĐÃ SỬA LỖI) ----------
+          // -------- Header Avatar + City (Đã sửa để co giãn) ----------
           Row(
             children: [
               _buildProfileAvatar(),
-              const SizedBox(width: 12), // Dùng khoảng trắng cố định thay cho Spacer
-              // Bọc phần địa chỉ trong Expanded để nó tự co giãn lấp đầy không gian
-              Expanded(
+              const SizedBox(width: 12),
+              // Dùng Flexible thay cho Expanded
+              // Flexible cho phép widget con có kích thước nhỏ hơn không gian tối đa
+              Flexible(
                 child: InkWell(
                   onTap: _chooseLocation,
                   borderRadius: BorderRadius.circular(20),
@@ -295,12 +288,13 @@ class _HomePageBodyState extends State<HomePageBody> {
                       border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min, // Giúp Row co lại vừa đủ nội dung
-                      mainAxisAlignment: MainAxisAlignment.end, // Đẩy nội dung về cuối (bên phải)
+                      // Thêm mainAxisSize.min
+                      // Thuộc tính này bảo Row hãy co lại để vừa khít với nội dung bên trong
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.location_on, color: primaryColor, size: 20),
                         const SizedBox(width: 6),
-                        // Bọc Text trong Flexible để nó co giãn và không đẩy các icon khác
+                        // Vẫn cần Flexible ở đây để xử lý text dài
                         Flexible(
                           child: Text(
                             _currentCity,
@@ -308,11 +302,12 @@ class _HomePageBodyState extends State<HomePageBody> {
                               fontWeight: FontWeight.w500,
                               fontSize: 14,
                             ),
-                            textAlign: TextAlign.right, // Căn lề phải cho đẹp
-                            overflow: TextOverflow.ellipsis, // Hiển thị "..." nếu quá dài
+                            overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
                         ),
+                        // Thêm khoảng trống nhỏ để không bị sát vào icon
+                        const SizedBox(width: 4), 
                         const Icon(
                           Icons.keyboard_arrow_down_rounded,
                           size: 20,
