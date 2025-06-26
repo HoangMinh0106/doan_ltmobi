@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
-import 'package:doan_ltmobi/page/vn_location_search.dart';   // <-- màn hình chọn vị trí
+import 'package:doan_ltmobi/page/vn_location_search.dart';
 
 class HomePageBody extends StatefulWidget {
   final String userName;
@@ -33,6 +33,10 @@ class _HomePageBodyState extends State<HomePageBody> {
 
   // ---- CITY ----
   String _currentCity = 'Hồ Chí Minh';
+
+  // --- UI CONSTANTS ---
+  static const Color primaryColor = Color(0xFFE57373);
+  static const Color secondaryTextColor = Colors.grey;
 
   @override
   void initState() {
@@ -113,6 +117,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   }
 
   Widget _buildPromoSlider() {
+    // ... (Phần này không thay đổi)
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bannersFuture,
       builder: (context, snap) {
@@ -120,7 +125,7 @@ class _HomePageBodyState extends State<HomePageBody> {
           return const SizedBox(
             height: 204,
             child: Center(
-              child: CircularProgressIndicator(color: Color(0xFFE57373)),
+              child: CircularProgressIndicator(color: primaryColor),
             ),
           );
         }
@@ -161,7 +166,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                                 ? child
                                 : Center(
                                     child: CircularProgressIndicator(
-                                      color: const Color(0xFFE57373),
+                                      color: primaryColor,
                                       value: progress.expectedTotalBytes != null
                                           ? progress.cumulativeBytesLoaded /
                                               progress.expectedTotalBytes!
@@ -181,7 +186,7 @@ class _HomePageBodyState extends State<HomePageBody> {
               effect: const WormEffect(
                 dotWidth: 8,
                 dotHeight: 8,
-                activeDotColor: Color(0xFFE57373),
+                activeDotColor: primaryColor,
                 dotColor: Colors.grey,
               ),
             ),
@@ -191,32 +196,9 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
-  Widget _buildCategoryItem(String name, String? img) => Container(
-        width: 90,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          children: [
-            Container(
-              height: 70,
-              width: 70,
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                  color: Color(0xFFFFF0F0), shape: BoxShape.circle),
-              child: img != null && img.isNotEmpty
-                  ? Image.network(img, fit: BoxFit.contain)
-                  : const Icon(Icons.category,
-                      size: 35, color: Color(0xFFE57373)),
-            ),
-            const SizedBox(height: 8),
-            Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
-          ],
-        ),
-      );
-
-  Widget _buildCategorySection() => Column(
+  Widget _buildCategorySection() {
+    // ... (Phần này không thay đổi)
+    return Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -226,7 +208,7 @@ class _HomePageBodyState extends State<HomePageBody> {
               TextButton(
                 onPressed: () => Navigator.pushNamed(context, "/category"),
                 child: const Text("Xem tất cả",
-                    style: TextStyle(color: Color(0xFFE57373))),
+                    style: TextStyle(color: primaryColor)),
               ),
             ],
           ),
@@ -239,7 +221,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Center(
                       child:
-                          CircularProgressIndicator(color: Color(0xFFE57373)));
+                          CircularProgressIndicator(color: primaryColor));
                 }
                 if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
                   return const Center(child: Text("Không thể tải danh mục."));
@@ -257,6 +239,35 @@ class _HomePageBodyState extends State<HomePageBody> {
           ),
         ],
       );
+  }
+
+  Widget _buildCategoryItem(String name, String? img) {
+    // ... (Phần này không thay đổi)
+    return Container(
+        width: 90,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          children: [
+            Container(
+              height: 70,
+              width: 70,
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                  color: Color(0xFFFFF0F0), shape: BoxShape.circle),
+              child: img != null && img.isNotEmpty
+                  ? Image.network(img, fit: BoxFit.contain)
+                  : const Icon(Icons.category,
+                      size: 35, color: primaryColor),
+            ),
+            const SizedBox(height: 8),
+            Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
+          ],
+        ),
+      );
+  }
 
   /* ============== BUILD ============== */
   @override
@@ -265,23 +276,51 @@ class _HomePageBodyState extends State<HomePageBody> {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          // -------- Header Avatar + City ----------
+          // ===== THAY ĐỔI CHÍNH NẰM Ở ĐÂY =====
+          // -------- Header Avatar + City (ĐÃ SỬA LỖI) ----------
           Row(
             children: [
               _buildProfileAvatar(),
-              const Spacer(),
-              InkWell(
-                onTap: _chooseLocation,
-                borderRadius: BorderRadius.circular(8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.location_on, color: Color(0xFFE57373)),
-                    const SizedBox(width: 4),
-                    Text(_currentCity,
-                        style: const TextStyle(fontWeight: FontWeight.w500)),
-                    const Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 18, color: Color(0xFFE57373)),
-                  ],
+              const SizedBox(width: 12), // Dùng khoảng trắng cố định thay cho Spacer
+              // Bọc phần địa chỉ trong Expanded để nó tự co giãn lấp đầy không gian
+              Expanded(
+                child: InkWell(
+                  onTap: _chooseLocation,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min, // Giúp Row co lại vừa đủ nội dung
+                      mainAxisAlignment: MainAxisAlignment.end, // Đẩy nội dung về cuối (bên phải)
+                      children: [
+                        const Icon(Icons.location_on, color: primaryColor, size: 20),
+                        const SizedBox(width: 6),
+                        // Bọc Text trong Flexible để nó co giãn và không đẩy các icon khác
+                        Flexible(
+                          child: Text(
+                            _currentCity,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.right, // Căn lề phải cho đẹp
+                            overflow: TextOverflow.ellipsis, // Hiển thị "..." nếu quá dài
+                            maxLines: 1,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: primaryColor,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -297,13 +336,22 @@ class _HomePageBodyState extends State<HomePageBody> {
           const SizedBox(height: 24),
           TextField(
             decoration: InputDecoration(
-              hintText: 'Tìm kiếm',
-              prefixIcon: const Icon(Icons.search),
+              hintText: 'Tìm kiếm sản phẩm, dịch vụ...',
+              prefixIcon: const Icon(Icons.search, color: secondaryTextColor),
               filled: true,
-              fillColor: Colors.grey.shade100,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(30.0),
                 borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide: const BorderSide(color: primaryColor, width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
             ),
           ),
@@ -317,7 +365,7 @@ class _HomePageBodyState extends State<HomePageBody> {
               TextButton(
                 onPressed: () {},
                 child: const Text("Xem tất cả",
-                    style: TextStyle(color: Color(0xFFE57373))),
+                    style: TextStyle(color: primaryColor)),
               ),
             ],
           ),
