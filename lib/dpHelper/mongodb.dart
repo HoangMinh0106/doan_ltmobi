@@ -7,7 +7,7 @@ class MongoDatabase {
   static var db , userCollection;
   static var bannerCollection; //slider
   static var categoryCollection; //cate
-  //static var cb, productCollection;
+  static var productCollection; //product
   //static var orderCollection;
   static connect() async{
     db = await Db.create(MONGO_CONN_URL);
@@ -16,7 +16,7 @@ class MongoDatabase {
     userCollection = db.collection(USER_COLLECTION);
     bannerCollection = db.collection("banners"); //silder
     categoryCollection = db.collection("categories"); //cate
-    //productCollection = db.collection("products"); //product
+    productCollection = db.collection("products"); //product
     //orderCollection = db.collection("orders"); //order
   }
   static Future<List<Map<String, dynamic>>> getData() async {

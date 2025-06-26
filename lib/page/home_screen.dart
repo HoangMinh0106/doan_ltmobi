@@ -1,6 +1,6 @@
 import 'package:doan_ltmobi/page/home_page_body.dart';
 import 'package:doan_ltmobi/page/profile_screen.dart';
-//import 'package:doan_ltmobi/page/login_screen.dart'; 
+import 'package:doan_ltmobi/page/product_screen.dart'; // <-- ĐÃ THÊM IMPORT
 import 'package:flutter/material.dart';
 
 // MÀN HÌNH CHÍNH (FRAME)
@@ -33,6 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final String email = _currentUserDocument["email"] ?? "User";
@@ -45,8 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
       ),
-      // Tab 1: Sản phẩm (Placeholder)
-      const Center(child: Text('Trang Sản phẩm')),
+      // Tab 1: Sản phẩm
+      const ProductScreen(), // <-- ĐÃ THAY THẾ
       // Tab 2: Giỏ hàng (Placeholder)
       const Center(child: Text('Trang Giỏ hàng')),
       // Tab 3: Hồ sơ
@@ -58,6 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: widgetOptions,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFFFF0F0),
@@ -81,31 +91,20 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Trang chủ'),
-               BottomNavigationBarItem(icon: Icon(Icons.production_quantity_limits), activeIcon: Icon(Icons.production_quantity_limits), label: 'Sản Phẩm'),
+              BottomNavigationBarItem(icon: Icon(Icons.production_quantity_limits), activeIcon: Icon(Icons.production_quantity_limits), label: 'Sản Phẩm'),
               BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Giỏ hàng'),
               BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Hồ sơ'),
             ],
             currentIndex: _selectedIndex,
             selectedItemColor: const Color(0xFFE57373),
             unselectedItemColor: Colors.grey,
-            // *** BẮT ĐẦU THAY ĐỔI ***
-            // Khôi phục lại logic chuyển tab như bình thường
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            // *** KẾT THÚC THAY ĐỔI ***
+            onTap: _onItemTapped,
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.transparent,
             elevation: 0,
             showUnselectedLabels: true,
           ),
         ),
-      ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: widgetOptions,
       ),
     );
   }
