@@ -36,31 +36,35 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
-  /* ------------- 🔥 NEW: CHỈNH SỬA USER ------------- */
-  Future<void> _editUser(Map<String, dynamic> user) async {
-    final emailC  = TextEditingController(text: user['email']);
-    final phoneC  = TextEditingController(text: user['phone']);
-    String gender = user['gender'] ?? 'Nam';
+  /* ------------- 🔥 NEW: THÊM VÀ CHỈNH SỬA USER ------------- */
+  Future<void> _addOrEditUser({Map<String, dynamic>? user}) async {
+    final bool isEditMode = user != null;
+    final emailC = TextEditingController(text: isEditMode ? user['email'] : '');
+    final phoneC = TextEditingController(text: isEditMode ? user['phone'] : '');
+    // Thêm controller cho mật khẩu, chỉ yêu cầu khi thêm mới
+    final passwordC = TextEditingController();
+    String gender = isEditMode ? (user['gender'] ?? 'Nam') : 'Nam';
 
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSt) => AlertDialog(
-            title: const Text('Chỉnh sửa thông tin'),
+            title: Text(isEditMode ? 'Chỉnh sửa thông tin' : 'Thêm người dùng mới'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(controller: emailC, decoration: const InputDecoration(labelText: 'Email')),
+                  // Chỉ hiển thị trường mật khẩu khi thêm mới
+                  if (!isEditMode)
+                    TextField(controller: passwordC, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu')),
                   TextField(controller: phoneC, decoration: const InputDecoration(labelText: 'Số điện thoại')),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: gender,
                     decoration: const InputDecoration(labelText: 'Giới tính'),
-                    items: const ['Nam', 'Nữ', 'Khác']
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items: const ['Nam', 'Nữ', 'Khác'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (v) => setSt(() => gender = v!),
                   ),
                 ],
@@ -69,9 +73,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
               ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
+                onPressed: () {
+                  // Kiểm tra trường bắt buộc khi thêm mới
+                  if (!isEditMode && (emailC.text.isEmpty || passwordC.text.isEmpty)) {
+                     ElegantNotification.error(title: const Text('Lỗi'), description: const Text('Email và mật khẩu là bắt buộc.')).show(context);
+                     return;
+                  }
+                  Navigator.pop(ctx, true);
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                child: const Text('Lưu'),
+                child: Text(isEditMode ? 'Lưu' : 'Thêm'),
               ),
             ],
           ),
@@ -80,15 +91,32 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
 
     if (saved == true) {
-      await MongoDatabase.userCollection.updateOne(
-        M.where.id(user['_id']),
-        M.modify
-          ..set('email', emailC.text.trim())
-          ..set('phone', phoneC.text.trim())
-          ..set('gender', gender),
-      );
+      if (isEditMode) {
+        // Chế độ chỉnh sửa
+        await MongoDatabase.userCollection.updateOne(
+          M.where.id(user['_id']),
+          M.modify
+            ..set('email', emailC.text.trim())
+            ..set('phone', phoneC.text.trim())
+            ..set('gender', gender),
+        );
+      } else {
+        // Chế độ thêm mới
+        await MongoDatabase.userCollection.insertOne({
+          '_id': M.ObjectId(),
+          'email': emailC.text.trim(),
+          'password': passwordC.text.trim(), // Lưu ý: nên mã hóa mật khẩu trong ứng dụng thực tế
+          'phone': phoneC.text.trim(),
+          'gender': gender,
+          'profile_image_base64': '', // Giá trị mặc định
+        });
+      }
+
       if (mounted) {
-        ElegantNotification.success(title: const Text('Thành công'), description: const Text('Đã cập nhật thông tin.')).show(context);
+        ElegantNotification.success(
+          title: const Text('Thành công'),
+          description: Text(isEditMode ? 'Đã cập nhật thông tin.' : 'Đã thêm người dùng mới.'),
+        ).show(context);
         setState(() {});
       }
     }
@@ -99,8 +127,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Quản lý người dùng'), backgroundColor: Colors.redAccent),
+      // *** BẮT ĐẦU THAY ĐỔI ***
+      // Thêm nút Floating Action Button để thêm người dùng
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addOrEditUser(), // Gọi hàm ở chế độ "thêm mới"
+        backgroundColor: Colors.redAccent,
+        child: const Icon(Icons.add),
+        tooltip: 'Thêm người dùng mới',
+      ),
+      // *** KẾT THÚC THAY ĐỔI ***
       body: FutureBuilder<List<Map<String, dynamic>>>(
-       future: MongoDatabase.userCollection.find().toList(),
+        future: MongoDatabase.userCollection.find().toList(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
@@ -113,7 +150,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               final u = users[i];
               Uint8List? avatarBytes;
               if (u['profile_image_base64'] != null && (u['profile_image_base64'] as String).isNotEmpty) {
-                try { avatarBytes = base64Decode(u['profile_image_base64']); } catch (_) {}
+                try {
+                  avatarBytes = base64Decode(u['profile_image_base64']);
+                } catch (_) {}
               }
 
               return Card(
@@ -130,7 +169,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       /* nút sửa */
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => _editUser(u),
+                        // *** BẮT ĐẦU THAY ĐỔI ***
+                        onPressed: () => _addOrEditUser(user: u), // Gọi hàm ở chế độ "chỉnh sửa"
+                        // *** KẾT THÚC THAY ĐỔI ***
                       ),
                       /* nút xóa */
                       IconButton(
