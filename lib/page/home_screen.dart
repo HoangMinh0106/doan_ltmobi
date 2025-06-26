@@ -45,10 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
       ),
-      // Tab 1: Giỏ hàng (Placeholder)
+      // Tab 1: Sản phẩm (Placeholder)
+      const Center(child: Text('Trang Sản phẩm')),
+      // Tab 2: Giỏ hàng (Placeholder)
       const Center(child: Text('Trang Giỏ hàng')),
-      // Tab 2: Yêu thích (Placeholder)
-      const Center(child: Text('Trang Yêu thích')),
       // Tab 3: Hồ sơ
       ProfileScreen(
         userDocument: _currentUserDocument,
@@ -81,8 +81,8 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Trang chủ'),
+               BottomNavigationBarItem(icon: Icon(Icons.production_quantity_limits), activeIcon: Icon(Icons.production_quantity_limits), label: 'Sản Phẩm'),
               BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Giỏ hàng'),
-              BottomNavigationBarItem(icon: Icon(Icons.favorite_border), activeIcon: Icon(Icons.favorite), label: 'Yêu thích'),
               BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Hồ sơ'),
             ],
             currentIndex: _selectedIndex,
