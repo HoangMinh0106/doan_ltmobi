@@ -1,4 +1,4 @@
-import 'dart:async'; // <-- Thêm import cho Timer
+import 'dart:async'; 
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
@@ -21,13 +21,13 @@ class _HomePageBodyState extends State<HomePageBody> {
   late Future<List<Map<String, dynamic>>> _bannersFuture;
   int _currentBannerIndex = 0;
   final PageController _pageController = PageController(); 
-  Timer? _timer; // <-- Thêm biến Timer
+  Timer? _timer; 
 
   @override
   void initState() {
     super.initState();
     _bannersFuture = _fetchBanners();
-    // Sau khi có dữ liệu, khởi tạo Timer
+    
     _bannersFuture.then((banners) {
       if (banners.isNotEmpty) {
         _startAutoScroll(banners.length);
@@ -35,10 +35,9 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
   }
 
-  // *** BẮT ĐẦU THAY ĐỔI: Thêm các hàm quản lý Timer ***
   @override
   void dispose() {
-    _timer?.cancel(); // Hủy timer khi widget bị xóa
+    _timer?.cancel(); 
     _pageController.dispose();
     super.dispose();
   }
@@ -50,14 +49,15 @@ class _HomePageBodyState extends State<HomePageBody> {
       } else {
         _currentBannerIndex = 0;
       }
-      _pageController.animateToPage(
-        _currentBannerIndex,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeIn,
-      );
+      if(_pageController.hasClients){
+        _pageController.animateToPage(
+          _currentBannerIndex,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeIn,
+        );
+      }
     });
   }
-  // *** KẾT THÚC THAY ĐỔI ***
 
   Future<List<Map<String, dynamic>>> _fetchBanners() async {
     try {
@@ -86,14 +86,14 @@ class _HomePageBodyState extends State<HomePageBody> {
       future: _bannersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 150,
-            child: Center(child: CircularProgressIndicator(color: Color(0xFFE57373))),
+          return SizedBox(
+            height: 204,
+            child: Center(child: CircularProgressIndicator(color: const Color(0xFFE57373))),
           );
         }
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox(
-            height: 150,
+            height: 204,
             child: Center(child: Text("Không thể tải ưu đãi.")),
           );
         }
@@ -102,7 +102,7 @@ class _HomePageBodyState extends State<HomePageBody> {
         return Column(
           children: [
             SizedBox(
-              height: 150,
+              height: 204,
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: banners.length,
@@ -113,16 +113,41 @@ class _HomePageBodyState extends State<HomePageBody> {
                 },
                 itemBuilder: (context, index) {
                   final banner = banners[index];
-                  final imageUrl = banner['imageUrl'] ?? 'https://placehold.co/600x300?text=No+Image';
+                  final imageUrl = banner['imageUrl'] ?? '';
+                  
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      image: DecorationImage(
-                        image: NetworkImage(imageUrl),
-                        fit: BoxFit.cover,
-                        onError: (exception, stackTrace) {
-                          print("Lỗi tải ảnh banner: $exception");
+                      child: Image.network(
+                        imageUrl,
+                        // *** BẮT ĐẦU THAY ĐỔI ***
+                        // Dùng 'cover' để ảnh lấp đầy khung và khớp viền
+                        fit: BoxFit.cover, 
+                        // *** KẾT THÚC THAY ĐỔI ***
+                        loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              color: const Color(0xFFE57373),
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (BuildContext context, Object exception, StackTrace? stackTrace) {
+                          print("Lỗi tải ảnh banner: $imageUrl -> $exception");
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.grey,
+                                size: 50,
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ),
