@@ -1,11 +1,12 @@
 // file: lib/page/login_screen.dart
 
-import 'package:doan_ltmobi/page/forgot_password_screen.dart'; // ĐÃ THÊM IMPORT NÀY
+import 'package:doan_ltmobi/page/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/register_screen.dart';
 import 'package:doan_ltmobi/page/home_screen.dart';
 import 'package:doan_ltmobi/page/admin/admin_screen.dart';
+import 'package:elegant_notification/elegant_notification.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,8 +19,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   void _loginUser() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final email = _emailController.text;
     final password = _passwordController.text;
 
@@ -37,20 +43,36 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const AdminScreen()),
           );
         } else {
+          // *** THAY ĐỔI QUAN TRỌNG: Truyền toàn bộ document sang HomeScreen ***
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            MaterialPageRoute(
+                builder: (context) => HomeScreen(
+                      userDocument: userDocument,
+                    )),
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email hoặc mật khẩu không đúng.')),
-        );
+        if (mounted) {
+           ElegantNotification.error(
+            title: const Text("Lỗi"),
+            description: const Text("Email hoặc mật khẩu không đúng."),
+          ).show(context);
+        }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin.')),
-      );
+       if (mounted) {
+         ElegantNotification.error(
+            title: const Text("Lỗi"),
+            description: const Text("Vui lòng điền đầy đủ thông tin."),
+          ).show(context);
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -106,10 +128,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     floatingLabelStyle: const TextStyle(color: Colors.black),
                     enabledBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
+                      borderSide:
+                          BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
                     ),
                     focusedBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
+                      borderSide:
+                          BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
                     ),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -125,10 +149,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     floatingLabelStyle: const TextStyle(color: Colors.black),
                     enabledBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
+                      borderSide:
+                          BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
                     ),
                     focusedBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
+                      borderSide:
+                          BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -148,7 +174,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    // *** ĐÃ CẬP NHẬT Ở ĐÂY ***
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -165,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
                 ElevatedButton(
-                  onPressed: _loginUser,
+                  onPressed: _isLoading ? null : _loginUser,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFDE0E0),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -173,7 +198,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                   ),
-                  child: const Text(
+                  child: _isLoading 
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                      )
+                    : const Text(
                     'Đăng nhập',
                     style: TextStyle(
                       fontSize: 16,
