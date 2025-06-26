@@ -6,6 +6,7 @@ import 'package:mongo_dart/mongo_dart.dart';
 class MongoDatabase {
   static var db , userCollection;
   static var bannerCollection; //slider
+  static var categoryCollection; //cate
 
   static connect() async{
     db = await Db.create(MONGO_CONN_URL);
@@ -13,6 +14,7 @@ class MongoDatabase {
     inspect(db);
     userCollection = db.collection(USER_COLLECTION);
     bannerCollection = db.collection("banners"); //silder
+    categoryCollection = db.collection("categories"); //cate
     
   }
   static Future<List<Map<String, dynamic>>> getData() async {

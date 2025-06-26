@@ -19,6 +19,7 @@ class HomePageBody extends StatefulWidget {
 
 class _HomePageBodyState extends State<HomePageBody> {
   late Future<List<Map<String, dynamic>>> _bannersFuture;
+  late Future<List<Map<String, dynamic>>> _categoriesFuture; // Biến để lấy dữ liệu danh mục
   int _currentBannerIndex = 0;
   final PageController _pageController = PageController(); 
   Timer? _timer; 
@@ -27,6 +28,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   void initState() {
     super.initState();
     _bannersFuture = _fetchBanners();
+    _categoriesFuture = _fetchCategories(); // Gọi hàm lấy dữ liệu danh mục
     
     _bannersFuture.then((banners) {
       if (banners.isNotEmpty) {
@@ -65,6 +67,17 @@ class _HomePageBodyState extends State<HomePageBody> {
       return banners;
     } catch (e) {
       print("Lỗi khi lấy dữ liệu banner: $e");
+      return [];
+    }
+  }
+
+  // Hàm để lấy dữ liệu danh mục từ MongoDB
+  Future<List<Map<String, dynamic>>> _fetchCategories() async {
+    try {
+      final categories = await MongoDatabase.categoryCollection.find().toList();
+      return categories;
+    } catch (e) {
+      print("Lỗi khi lấy dữ liệu danh mục: $e");
       return [];
     }
   }
@@ -121,10 +134,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
                         imageUrl,
-                        // *** BẮT ĐẦU THAY ĐỔI ***
-                        // Dùng 'cover' để ảnh lấp đầy khung và khớp viền
                         fit: BoxFit.cover, 
-                        // *** KẾT THÚC THAY ĐỔI ***
                         loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Center(
@@ -172,6 +182,88 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
+  // Widget để hiển thị một danh mục
+  Widget _buildCategoryItem(String name, String? imageUrl) {
+    Widget imageWidget;
+    if(imageUrl != null && imageUrl.isNotEmpty) {
+      imageWidget = Image.network(
+        imageUrl, 
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => const Icon(Icons.category, size: 35, color: Color(0xFFE57373)),
+      );
+    } else {
+      imageWidget = const Icon(Icons.category, size: 35, color: Color(0xFFE57373));
+    }
+
+    return Container(
+      width: 90,
+      margin: const EdgeInsets.only(right: 12),
+      child: Column(
+        children: [
+          Container(
+            height: 70,
+            width: 70,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF0F0),
+              shape: BoxShape.circle,
+            ),
+            child: imageWidget,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget xây dựng khu vực danh mục từ DB
+  Widget _buildCategorySection() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("Danh mục", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            TextButton(onPressed: () {}, child: const Text("Xem tất cả", style: TextStyle(color: Color(0xFFE57373)))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 110,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _categoriesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: Color(0xFFE57373)));
+              }
+              if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text("Không thể tải danh mục."));
+              }
+
+              final categories = snapshot.data!;
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  // Lấy dữ liệu từ DB để hiển thị
+                  return _buildCategoryItem(category['name'] ?? 'N/A', category['imageUrl']);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -215,6 +307,10 @@ class _HomePageBodyState extends State<HomePageBody> {
           ),
           const SizedBox(height: 12),
           _buildPromoSlider(),
+          
+          // Thêm khu vực danh mục vào giao diện
+          const SizedBox(height: 24),
+          _buildCategorySection(),
         ],
       ),
     );
