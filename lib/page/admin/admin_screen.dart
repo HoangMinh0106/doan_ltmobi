@@ -1,4 +1,5 @@
 import 'package:doan_ltmobi/page/admin/user_management_screen.dart'; // Import màn hình mới
+import 'package:doan_ltmobi/page/admin/category_management_screen.dart'; // Import màn hình mới
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -77,6 +78,18 @@ class AdminScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const UserManagementScreen()),
+                );
+              },
+            ),
+             _buildDashboardCard(
+              context: context,
+              icon: Icons.category,
+              title: 'Quản lý Danh Mục',
+              color: Colors.green,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CategoryManagementScreen()),
                 );
               },
             ),
