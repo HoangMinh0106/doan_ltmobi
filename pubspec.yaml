@@ -11,13 +11,14 @@ dependencies: # ✅ Đặt ở đây (cùng cấp với flutter)
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  shared_preferences: ^2.2.2 # ✅ Thêm vào đây, không đặt trong "flutter"
+  shared_preferences: ^2.2.2 
   mongo_dart: ^0.10.5
   image_picker: ^1.1.2
-  url_launcher: ^6.3.1
-  mailer: ^6.0.1
-  random_string: ^2.3.1
-  pinput: ^4.0.0
+  url_launcher: ^6.3.1 #dùng mở url trình duyệt trên phone
+  mailer: ^6.0.1 #dùng để gửi email thật
+  random_string: ^2.3.1 #tạo mã OTP
+  pinput: ^4.0.0 #giao diện OTP
+  elegant_notification: ^2.2.0
   
 
 dev_dependencies:

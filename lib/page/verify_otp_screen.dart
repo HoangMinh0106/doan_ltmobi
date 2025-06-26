@@ -64,7 +64,6 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Giao diện được thiết kế lại hoàn toàn ---
 
     // Định dạng cho ô nhập OTP (trạng thái bình thường)
     final defaultPinTheme = PinTheme(
