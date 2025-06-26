@@ -22,9 +22,12 @@ class _VnLocationSearchState extends State<VnLocationSearch> {
       'https://nominatim.openstreetmap.org/search'
       '?q=$q&format=json&limit=15&countrycodes=vn&addressdetails=1',
     );
-    final res = await http.get(uri, headers: {
-      'User-Agent': 'doan_ltmobi/1.0 (yourmail@example.com)'  // OSM yêu cầu
-    });
+    final res = await http.get(
+      uri,
+      headers: {
+        'User-Agent': 'doan_ltmobi/1.0 (yourmail@example.com)', // OSM yêu cầu
+      },
+    );
 
     if (res.statusCode == 200) {
       setState(() => _results = jsonDecode(res.body));
@@ -45,7 +48,9 @@ class _VnLocationSearchState extends State<VnLocationSearch> {
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Nhập tên TP, quận…',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 prefixIcon: const Icon(Icons.search),
               ),
               onChanged: _search,
@@ -59,8 +64,16 @@ class _VnLocationSearchState extends State<VnLocationSearch> {
                 final name = r['display_name'];
                 return ListTile(
                   leading: const Icon(Icons.location_on),
-                  title: Text(name),
-                  onTap: () => Navigator.pop(context, name), // trả kết quả
+                  title: Container(
+                    padding: const EdgeInsets.only(right: 12), // tránh sát viền
+                    child: Text(
+                      r['display_name'],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  onTap: () => Navigator.pop(context, r['display_name']),
                 );
               },
             ),
