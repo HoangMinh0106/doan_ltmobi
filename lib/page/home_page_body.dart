@@ -4,6 +4,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:doan_ltmobi/page/promotion_detail_screen.dart';
+import 'package:doan_ltmobi/page/promotions_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
@@ -12,7 +14,6 @@ import 'package:doan_ltmobi/page/vn_location_search.dart';
 class HomePageBody extends StatefulWidget {
   final String userName;
   final String? profileImageBase64;
-  // THAY ĐỔI: Chỉ cần callback, không cần controller
   final Function(String) onSearchSubmitted;
 
   const HomePageBody({
@@ -27,9 +28,7 @@ class HomePageBody extends StatefulWidget {
 }
 
 class _HomePageBodyState extends State<HomePageBody> {
-  // THAY ĐỔI: Tạo controller cục bộ
   final TextEditingController _searchController = TextEditingController();
-
   late Future<List<Map<String, dynamic>>> _bannersFuture;
   late Future<List<Map<String, dynamic>>> _categoriesFuture;
   final PageController _pageController = PageController();
@@ -52,13 +51,12 @@ class _HomePageBodyState extends State<HomePageBody> {
 
   @override
   void dispose() {
-    _searchController.dispose(); // Hủy controller
+    _searchController.dispose();
     _timer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
-  // ... (các hàm khác giữ nguyên không đổi)
   Future<List<Map<String, dynamic>>> _fetchBanners() async {
     try {
       return await MongoDatabase.bannerCollection.find().toList();
@@ -110,12 +108,17 @@ class _HomePageBodyState extends State<HomePageBody> {
     return const CircleAvatar(radius: 24, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white));
   }
 
+  // ===== WIDGET SLIDER ĐÃ ĐƯỢC CẬP NHẬT =====
   Widget _buildPromoSlider() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bannersFuture,
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) return const SizedBox(height: 204, child: Center(child: CircularProgressIndicator(color: primaryColor)));
-        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) return const SizedBox(height: 204, child: Center(child: Text("Không thể tải ưu đãi.")));
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox(height: 204, child: Center(child: CircularProgressIndicator(color: primaryColor)));
+        }
+        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
+          return const SizedBox(height: 204, child: Center(child: Text("Không thể tải ưu đãi.")));
+        }
         final banners = snap.data!;
         return Column(
           children: [
@@ -126,14 +129,26 @@ class _HomePageBodyState extends State<HomePageBody> {
                 itemCount: banners.length,
                 onPageChanged: (i) => setState(() => _currentBannerIndex = i),
                 itemBuilder: (_, i) {
-                  final url = banners[i]['imageUrl'] ?? '';
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(url, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50))),
-                        loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: CircularProgressIndicator(color: primaryColor, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null)),
+                  final banner = banners[i];
+                  final url = banner['imageUrl'] ?? '';
+                  // Bọc trong InkWell để có thể nhấn vào
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PromotionDetailScreen(promotion: banner),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(url, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50))),
+                          loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: CircularProgressIndicator(color: primaryColor, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null)),
+                        ),
                       ),
                     ),
                   );
@@ -198,7 +213,6 @@ class _HomePageBodyState extends State<HomePageBody> {
         ],
       );
 
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -236,7 +250,6 @@ class _HomePageBodyState extends State<HomePageBody> {
           Text("${widget.userName}!", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
-            // Dùng controller cục bộ và callback onSubmitted
             controller: _searchController,
             onSubmitted: widget.onSearchSubmitted,
             decoration: InputDecoration(
@@ -255,7 +268,16 @@ class _HomePageBodyState extends State<HomePageBody> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Ưu đãi đặc biệt", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () {}, child: const Text("Xem tất cả", style: TextStyle(color: primaryColor))),
+              // ===== NÚT "XEM TẤT CẢ" ĐÃ ĐƯỢC CẬP NHẬT =====
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PromotionsScreen()),
+                  );
+                },
+                child: const Text("Xem tất cả", style: TextStyle(color: primaryColor))
+              ),
             ],
           ),
           const SizedBox(height: 12),

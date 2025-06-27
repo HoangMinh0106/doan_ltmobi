@@ -1,6 +1,10 @@
+// lib/page/admin/admin_screen.dart
+
 import 'package:doan_ltmobi/page/admin/user_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/category_management_screen.dart';
-import 'package:doan_ltmobi/page/admin/product_management_screen.dart'; // <-- THÊM DÒNG NÀY
+import 'package:doan_ltmobi/page/admin/product_management_screen.dart';
+// Import trang quản lý ưu đãi mới
+import 'package:doan_ltmobi/page/admin/promotion_management_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -93,22 +97,26 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
+            // ===== THAY ĐỔI Ở ĐÂY =====
             _buildDashboardCard(
               context: context,
-              icon: Icons.image_outlined,
-              title: 'Quản lý Banner',
-              color: Colors.teal, // Đổi màu cho đẹp hơn
+              icon: Icons.campaign_outlined, // Đổi icon cho phù hợp
+              title: 'Quản lý Ưu đãi', // Đổi tên
+              color: Colors.teal,
               onTap: () {
-                // TODO: Thêm logic điều hướng đến trang quản lý banner
+                // Điều hướng đến trang quản lý ưu đãi mới
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PromotionManagementScreen()),
+                );
               },
             ),
              _buildDashboardCard(
               context: context,
-              icon: Icons.shopping_bag_outlined, // Đổi icon cho phù hợp
+              icon: Icons.shopping_bag_outlined,
               title: 'Quản lý sản phẩm',
               color: Colors.orange,
               onTap: () {
-                // ===== THAY ĐỔI Ở ĐÂY =====
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ProductManagementScreen()),
