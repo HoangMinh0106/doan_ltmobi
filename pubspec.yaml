@@ -21,6 +21,10 @@ dependencies:        # <-- CHỈ MỘT khối dependencies
   elegant_notification: ^2.2.0
   smooth_page_indicator: ^1.1.0
 
+  flutter_launcher_icons: ^0.13.1
+    
+  
+
   # Google location / maps
   google_place: ^0.4.7
   http: ^0.13.6
@@ -36,3 +40,10 @@ flutter:              # <-- CHỈ MỘT khối flutter
   uses-material-design: true
   assets:
     - assets/
+
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/icon_app.png" # <-- Sửa lại đúng đường dẫn đến tệp icon của bạn
+  min_sdk_android: 21 # optional

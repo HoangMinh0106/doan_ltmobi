@@ -1,7 +1,6 @@
-// Các import cần thiết
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:flutter/material.dart';
-import 'page/screen_screen.dart'; // Import file SplashScreen của bạn
+import 'page/screen_screen.dart'; 
 
 void main() async {
   // Đảm bảo các binding của Flutter đã được khởi tạo
@@ -10,7 +9,6 @@ void main() async {
   // Gọi kết nối đến database khi ứng dụng bắt đầu
   await MongoDatabase.connect();
 
-  // Chạy ứng dụng một cách bình thường, không còn DevicePreview
   runApp(const MyApp());
 }
 
