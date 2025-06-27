@@ -84,7 +84,7 @@ class _ProductScreenState extends State<ProductScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Đã thêm '$productName' vào giỏ hàng!"),
-          backgroundColor: Colors.green,
+          backgroundColor: primaryColor,
           duration: const Duration(seconds: 2),
         ),
       );
