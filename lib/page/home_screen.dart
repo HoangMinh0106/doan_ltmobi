@@ -1,6 +1,9 @@
+// lib/page/home_screen.dart
+
 import 'package:doan_ltmobi/page/home_page_body.dart';
 import 'package:doan_ltmobi/page/profile_screen.dart';
-import 'package:doan_ltmobi/page/product_screen.dart'; // <-- ĐÃ THÊM IMPORT
+import 'package:doan_ltmobi/page/product_screen.dart';
+import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:flutter/material.dart';
 
 // MÀN HÌNH CHÍNH (FRAME)
@@ -20,10 +23,18 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Map<String, dynamic> _currentUserDocument;
 
+  // THAY ĐỔI 1: Tạo GlobalKey cho CartScreenState
+  final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
+
   @override
   void initState() {
     super.initState();
     _currentUserDocument = widget.userDocument;
+  }
+  
+  // THAY ĐỔI 2: Tạo hàm để gọi việc cập nhật giỏ hàng
+  void _updateCart() {
+    _cartKey.currentState?.fetchCartItems();
   }
 
   // Callback function để cập nhật dữ liệu người dùng từ ProfileScreen
@@ -34,6 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
+    // Cập nhật giỏ hàng khi người dùng chủ động nhấn vào tab
+    if (index == 2) {
+      _updateCart();
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -43,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final String email = _currentUserDocument["email"] ?? "User";
     final String userName = email.split('@').first;
-
+    
     // Danh sách các trang tương ứng với các tab
     final List<Widget> widgetOptions = <Widget>[
       // Tab 0: Trang chủ
@@ -51,10 +66,16 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
       ),
-      // Tab 1: Sản phẩm
-      const ProductScreen(), // <-- ĐÃ THAY THẾ
-      // Tab 2: Giỏ hàng (Placeholder)
-      const Center(child: Text('Trang Giỏ hàng')),
+      // THAY ĐỔI 3: Truyền hàm _updateCart vào ProductScreen
+      ProductScreen(
+        userDocument: _currentUserDocument,
+        onProductAdded: _updateCart,
+      ),
+      // THAY ĐỔI 4: Gán key cho CartScreen
+      CartScreen(
+        key: _cartKey,
+        userDocument: _currentUserDocument
+      ),
       // Tab 3: Hồ sơ
       ProfileScreen(
         userDocument: _currentUserDocument,
@@ -91,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Trang chủ'),
-              BottomNavigationBarItem(icon: Icon(Icons.production_quantity_limits), activeIcon: Icon(Icons.production_quantity_limits), label: 'Sản Phẩm'),
+              BottomNavigationBarItem(icon: Icon(Icons.widgets_outlined), activeIcon: Icon(Icons.widgets), label: 'Sản Phẩm'),
               BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Giỏ hàng'),
               BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Hồ sơ'),
             ],

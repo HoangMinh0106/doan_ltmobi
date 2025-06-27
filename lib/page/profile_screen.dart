@@ -123,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Thông tin cá nhân"),
+        title: const Text("Thông tin cá nhân",style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22)),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
