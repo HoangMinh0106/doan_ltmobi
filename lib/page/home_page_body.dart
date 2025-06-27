@@ -89,7 +89,7 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
   }
 
-  /* ============== CHỌN THÀNH PHỐ ============== */
+  //chọn thành phố
   Future<void> _chooseLocation() async {
     final result = await Navigator.push(
       context,
@@ -100,7 +100,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     }
   }
 
-  /* ============== WIDGETS ============== */
   Widget _buildProfileAvatar() {
     if (widget.profileImageBase64 != null &&
         widget.profileImageBase64!.isNotEmpty) {
@@ -262,20 +261,16 @@ class _HomePageBodyState extends State<HomePageBody> {
         ],
       );
 
-  /* ============== BUILD ============== */
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         children: [
-          // -------- Header Avatar + City (Đã sửa để co giãn) ----------
           Row(
             children: [
               _buildProfileAvatar(),
               const SizedBox(width: 12),
-              // Dùng Flexible thay cho Expanded
-              // Flexible cho phép widget con có kích thước nhỏ hơn không gian tối đa
               Flexible(
                 child: InkWell(
                   onTap: _chooseLocation,
@@ -288,13 +283,10 @@ class _HomePageBodyState extends State<HomePageBody> {
                       border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Row(
-                      // Thêm mainAxisSize.min
-                      // Thuộc tính này bảo Row hãy co lại để vừa khít với nội dung bên trong
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.location_on, color: primaryColor, size: 20),
                         const SizedBox(width: 6),
-                        // Vẫn cần Flexible ở đây để xử lý text dài
                         Flexible(
                           child: Text(
                             _currentCity,
@@ -306,7 +298,6 @@ class _HomePageBodyState extends State<HomePageBody> {
                             maxLines: 1,
                           ),
                         ),
-                        // Thêm khoảng trống nhỏ để không bị sát vào icon
                         const SizedBox(width: 4), 
                         const Icon(
                           Icons.keyboard_arrow_down_rounded,

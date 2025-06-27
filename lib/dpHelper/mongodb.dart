@@ -25,11 +25,7 @@ class MongoDatabase {
 
   static Future<void> insertUser(String email, String password) async {
     try {
-      await userCollection.insertOne({
-        'email': email,
-        'password': password,
-      });
-      print("Đã thêm người dùng mới thành công!");
+      await userCollection.insertOne({'email': email, 'password': password});
     } catch (e) {
       print("Lỗi khi thêm người dùng: $e");
     }
@@ -44,41 +40,20 @@ class MongoDatabase {
     try {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
       final productId = product['_id'];
-
       if (cart == null) {
         await cartCollection.insertOne({
           'userId': userId,
-          'items': [
-            {
-              'productId': productId,
-              'name': product['name'],
-              'price': product['price'],
-              'imageUrl': product['imageUrl'],
-              'description': product['description'],
-              'quantity': 1,
-            }
-          ]
+          'items': [{'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': 1}]
         });
       } else {
         var items = List<Map<String, dynamic>>.from(cart['items']);
         int existingItemIndex = items.indexWhere((item) => item['productId'] == productId);
-
         if (existingItemIndex != -1) {
           items[existingItemIndex]['quantity'] += 1;
         } else {
-          items.add({
-            'productId': productId,
-            'name': product['name'],
-            'price': product['price'],
-            'imageUrl': product['imageUrl'],
-            'description': product['description'],
-            'quantity': 1,
-          });
+          items.add({'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': 1});
         }
-        await cartCollection.update(
-          where.eq('userId', userId),
-          modify.set('items', items),
-        );
+        await cartCollection.update(where.eq('userId', userId), modify.set('items', items));
       }
     } catch (e) {
       print("Lỗi khi thêm vào giỏ hàng: $e");
@@ -95,9 +70,25 @@ class MongoDatabase {
     }
   }
   
-  // =====================================================================
-  // ===== HÀM MỚI: CẬP NHẬT SỐ LƯỢNG SẢN PHẨM TRONG GIỎ HÀNG =====
-  // =====================================================================
+  //lấy tổng số lượng sản phẩm 
+  static Future<int> getCartTotalQuantity(ObjectId userId) async {
+    try {
+      final cart = await cartCollection.findOne(where.eq('userId', userId));
+      if (cart == null || cart['items'] == null) {
+        return 0;
+      }
+      int totalQuantity = 0;
+      final items = List<Map<String, dynamic>>.from(cart['items']);
+      for (var item in items) {
+        totalQuantity += (item['quantity'] as int?) ?? 0;
+      }
+      return totalQuantity;
+    } catch (e) {
+      print("Lỗi khi lấy tổng số lượng giỏ hàng: $e");
+      return 0;
+    }
+  }
+
   static Future<void> updateItemQuantity(ObjectId userId, ObjectId productId, int newQuantity) async {
     try {
       var cart = await cartCollection.findOne(where.eq('userId', userId));
@@ -106,26 +97,17 @@ class MongoDatabase {
         int itemIndex = items.indexWhere((item) => item['productId'] == productId);
         if (itemIndex != -1) {
           items[itemIndex]['quantity'] = newQuantity;
-          await cartCollection.update(
-            where.eq('userId', userId),
-            modify.set('items', items),
-          );
+          await cartCollection.update(where.eq('userId', userId), modify.set('items', items));
         }
       }
-    } catch(e) {
+    } catch (e) {
       print("Lỗi khi cập nhật số lượng: $e");
     }
   }
 
-  // =====================================================================
-  // ===== HÀM MỚI: XÓA MỘT SẢN PHẨM KHỎI GIỎ HÀNG =====
-  // =====================================================================
   static Future<void> removeItemFromCart(ObjectId userId, ObjectId productId) async {
     try {
-      await cartCollection.update(
-        where.eq('userId', userId),
-        modify.pull('items', {'productId': productId}),
-      );
+      await cartCollection.update(where.eq('userId', userId), modify.pull('items', {'productId': productId}));
     } catch (e) {
       print("Lỗi khi xóa sản phẩm khỏi giỏ hàng: $e");
     }

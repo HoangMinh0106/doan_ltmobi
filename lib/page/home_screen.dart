@@ -6,7 +6,6 @@ import 'package:doan_ltmobi/page/product_screen.dart';
 import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:flutter/material.dart';
 
-// MÀN HÌNH CHÍNH (FRAME)
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
 
@@ -23,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Map<String, dynamic> _currentUserDocument;
 
-  // THAY ĐỔI 1: Tạo GlobalKey cho CartScreenState
   final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
 
   @override
@@ -31,13 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _currentUserDocument = widget.userDocument;
   }
-  
-  // THAY ĐỔI 2: Tạo hàm để gọi việc cập nhật giỏ hàng
-  void _updateCart() {
-    _cartKey.currentState?.fetchCartItems();
-  }
 
-  // Callback function để cập nhật dữ liệu người dùng từ ProfileScreen
   void _updateUserDocument(Map<String, dynamic> newDocument) {
     setState(() {
       _currentUserDocument = newDocument;
@@ -47,36 +39,40 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onItemTapped(int index) {
     // Cập nhật giỏ hàng khi người dùng chủ động nhấn vào tab
     if (index == 2) {
-      _updateCart();
+      _cartKey.currentState?.fetchCartItems();
     }
     setState(() {
       _selectedIndex = index;
     });
+  }
+  
+  // Hàm để điều hướng đến tab giỏ hàng
+  void _navigateToCartTab() {
+    _onItemTapped(2);
   }
 
   @override
   Widget build(BuildContext context) {
     final String email = _currentUserDocument["email"] ?? "User";
     final String userName = email.split('@').first;
-    
+
     // Danh sách các trang tương ứng với các tab
     final List<Widget> widgetOptions = <Widget>[
-      // Tab 0: Trang chủ
       HomePageBody(
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
       ),
-      // THAY ĐỔI 3: Truyền hàm _updateCart vào ProductScreen
+      // DÒNG BỊ LỖI CỦA BẠN ĐÃ ĐƯỢC SỬA Ở ĐÂY
       ProductScreen(
         userDocument: _currentUserDocument,
-        onProductAdded: _updateCart,
+        onProductAdded: _navigateToCartTab,
+        // Tham số onCartIconTapped đã được thêm vào đây
+        onCartIconTapped: _navigateToCartTab,
       ),
-      // THAY ĐỔI 4: Gán key cho CartScreen
       CartScreen(
         key: _cartKey,
         userDocument: _currentUserDocument
       ),
-      // Tab 3: Hồ sơ
       ProfileScreen(
         userDocument: _currentUserDocument,
         onProfileUpdated: _updateUserDocument,

@@ -1,7 +1,7 @@
 // lib/page/product_screen.dart
 
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
-import 'package:doan_ltmobi/page/product_detail_screen.dart'; // Import trang chi tiết sản phẩm
+import 'package:doan_ltmobi/page/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
@@ -9,11 +9,15 @@ import 'package:mongo_dart/mongo_dart.dart' as mongo;
 class ProductScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
   final VoidCallback onProductAdded;
+  // THAY ĐỔI 1: Thêm callback mới cho việc nhấn vào icon
+  final VoidCallback onCartIconTapped;
 
   const ProductScreen({
     Key? key,
     required this.userDocument,
     required this.onProductAdded,
+    // THAY ĐỔI 2: Yêu cầu callback trong constructor
+    required this.onCartIconTapped,
   }) : super(key: key);
 
   @override
@@ -26,6 +30,7 @@ class _ProductScreenState extends State<ProductScreen> {
   List<Map<String, dynamic>> _filteredProducts = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  int _cartTotalQuantity = 0;
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
@@ -36,12 +41,23 @@ class _ProductScreenState extends State<ProductScreen> {
     super.initState();
     _searchController.addListener(_filterProducts);
     _fetchProducts();
+    _updateCartBadge();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+  
+  Future<void> _updateCartBadge() async {
+    final userId = widget.userDocument['_id'] as mongo.ObjectId;
+    final count = await MongoDatabase.getCartTotalQuantity(userId);
+    if (mounted) {
+      setState(() {
+        _cartTotalQuantity = count;
+      });
+    }
   }
 
   Future<void> _fetchProducts() async {
@@ -79,6 +95,7 @@ class _ProductScreenState extends State<ProductScreen> {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productName = product['name'] ?? 'Sản phẩm';
     await MongoDatabase.addToCart(userId, product);
+    await _updateCartBadge();
     widget.onProductAdded();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,11 +118,55 @@ class _ProductScreenState extends State<ProductScreen> {
         elevation: 0.5,
         shadowColor: Colors.grey.withOpacity(0.2),
         centerTitle: true,
+        actions: [
+          _buildCartIcon()
+        ],
       ),
       body: Column(
         children: [
           _buildSearchBar(),
           Expanded(child: _buildBodyContent()),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildCartIcon() {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black54, size: 28),
+            // THAY ĐỔI 3: Gọi callback khi nhấn vào icon
+            onPressed: widget.onCartIconTapped,
+          ),
+          if (_cartTotalQuantity > 0)
+            Positioned(
+              right: 5,
+              top: 5,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Color(0xFFE57373),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Text(
+                  '$_cartTotalQuantity',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -176,8 +237,6 @@ class _ProductScreenState extends State<ProductScreen> {
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              // Dòng print() để kiểm tra dữ liệu
-              print("Dữ liệu sản phẩm từ ProductScreen: $product");
               Navigator.push(
                 context,
                 MaterialPageRoute(
