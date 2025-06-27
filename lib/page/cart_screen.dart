@@ -28,7 +28,6 @@ class CartScreenState extends State<CartScreen> {
     fetchCartItems();
   }
   
-  // Hàm public để HomeScreen có thể gọi
   Future<void> fetchCartItems() async {
     if (!mounted) return;
     setState(() { _isLoading = true; });
@@ -62,7 +61,6 @@ class CartScreenState extends State<CartScreen> {
     }
   }
 
-  // ===== CÁC HÀM XỬ LÝ MỚI =====
   void _updateQuantity(Map<String, dynamic> item, int newQuantity) async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productId = item['productId'] as mongo.ObjectId;
@@ -70,33 +68,31 @@ class CartScreenState extends State<CartScreen> {
     if (newQuantity > 0) {
       await MongoDatabase.updateItemQuantity(userId, productId, newQuantity);
     } else {
-      await MongoDatabase.removeItemFromCart(userId, productId);
+      // Nếu số lượng về 0, thì xóa sản phẩm
+      _deleteItem(item, skipConfirmation: true);
+      return; // Dừng hàm ở đây
     }
-    // Tải lại giỏ hàng để cập nhật UI và tổng tiền
     await fetchCartItems();
   }
   
-  void _deleteItem(Map<String, dynamic> item) async {
-     // Hiển thị hộp thoại xác nhận trước khi xóa
-    bool? confirmDelete = await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Xác nhận xóa'),
-          content: Text('Bạn có chắc chắn muốn xóa "${item['name']}" khỏi giỏ hàng không?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // Hủy
-              child: const Text('Hủy'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true), // Đồng ý
-              child: const Text('Xóa', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
+  void _deleteItem(Map<String, dynamic> item, {bool skipConfirmation = false}) async {
+    bool confirmDelete = skipConfirmation; // Bỏ qua xác nhận nếu giảm số lượng về 0
+
+    if (!skipConfirmation) {
+      confirmDelete = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Xác nhận xóa'),
+            content: Text('Bạn có chắc chắn muốn xóa "${item['name']}" khỏi giỏ hàng không?'),
+            actions: <Widget>[
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Hủy')),
+              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+            ],
+          );
+        },
+      ) ?? false;
+    }
 
     if (confirmDelete == true) {
       final userId = widget.userDocument['_id'] as mongo.ObjectId;
@@ -148,7 +144,9 @@ class CartScreenState extends State<CartScreen> {
     );
   }
   
-  // ===== GIAO DIỆN SẢN PHẨM TRONG GIỎ HÀNG ĐÃ ĐƯỢC CẬP NHẬT HOÀN TOÀN =====
+  // ======================================================================
+  // ===== GIAO DIỆN SẢN PHẨM TRONG GIỎ HÀNG ĐÃ ĐƯỢC CẬP NHẬT LẠI =====
+  // ======================================================================
   Widget _buildCartItemCard(Map<String, dynamic> item) {
     final String name = item['name'] ?? 'Sản phẩm';
     final String imageUrl = item['imageUrl'] ?? '';
@@ -161,8 +159,10 @@ class CartScreenState extends State<CartScreen> {
       elevation: 3,
       shadowColor: Colors.grey.withOpacity(0.15),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
         child: Row(
+          // Thêm thuộc tính này để căn chỉnh các thành phần theo chiều dọc
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
@@ -175,37 +175,49 @@ class CartScreenState extends State<CartScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
+            // Sử dụng Expanded và Column để Tên và Giá chiếm hết không gian còn lại
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 8),
-                  Text('${price.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                ],
+              child: SizedBox(
+                height: 80, // Đặt chiều cao bằng với chiều cao của ảnh
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Phân bố đều không gian
+                  children: [
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text('${price.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ],
+                ),
               ),
             ),
-            // Bộ điều khiển số lượng
-            Row(
+            const SizedBox(width: 8),
+            // Nhóm bộ điều khiển số lượng và nút xóa vào một Column
+            Column(
               children: [
-                _buildQuantityButton(
-                  icon: Icons.remove, 
-                  onPressed: () => _updateQuantity(item, quantity - 1)
+                Row(
+                  children: [
+                    _buildQuantityButton(
+                      icon: Icons.remove, 
+                      onPressed: () => _updateQuantity(item, quantity - 1)
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text('$quantity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                    _buildQuantityButton(
+                      icon: Icons.add, 
+                      onPressed: () => _updateQuantity(item, quantity + 1)
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Text('$quantity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-                _buildQuantityButton(
-                  icon: Icons.add, 
-                  onPressed: () => _updateQuantity(item, quantity + 1)
-                ),
-                // Nút xóa
-                IconButton(
-                  icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
-                  onPressed: () => _deleteItem(item),
+                // Giảm kích thước và padding của nút xóa để nó gọn hơn
+                SizedBox(
+                  height: 36,
+                  child: IconButton(
+                    iconSize: 22,
+                    icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
+                    onPressed: () => _deleteItem(item),
+                  ),
                 )
               ],
             )
