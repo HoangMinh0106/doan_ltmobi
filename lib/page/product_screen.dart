@@ -24,23 +24,26 @@ class ProductScreen extends StatefulWidget {
 
 class ProductScreenState extends State<ProductScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _filteredProducts = [];
   bool _isLoading = true;
   String _errorMessage = '';
   int _cartTotalQuantity = 0;
 
-  static const Color primaryColor = Color(0xFFE57373);
-  static const Color secondaryTextColor = Colors.grey;
-  static const Color backgroundColor = Color(0xFFF5F5F5);
+  // --- BẢNG MÀU ĐƯỢC CẢI THIỆN ---
+  static const Color primaryColor = Color(0xFFF07167); // Màu san hô hiện đại
+  static const Color scaffoldBackgroundColor = Color(0xFFF9F9F9); // Màu nền trắng ngà
+  static const Color textColor = Color(0xFF333333); // Màu chữ chính (xám đậm)
+  static final Color secondaryTextColor = Colors.grey.shade600; // Màu chữ phụ
+  static const Color cardBackgroundColor = Colors.white;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_filterProducts);
     _fetchProducts();
-    updateCartBadge(); // Sửa ở đây
+    updateCartBadge();
   }
 
   @override
@@ -48,12 +51,11 @@ class ProductScreenState extends State<ProductScreen> {
     _searchController.dispose();
     super.dispose();
   }
-  
+
   void performSearch(String query) {
     _searchController.text = query;
   }
-  
-  // THAY ĐỔI 1: Đổi tên hàm thành public (bỏ dấu gạch dưới)
+
   Future<void> updateCartBadge() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final count = await MongoDatabase.getCartTotalQuantity(userId);
@@ -67,7 +69,7 @@ class ProductScreenState extends State<ProductScreen> {
   Future<void> _fetchProducts() async {
     try {
       final products = await MongoDatabase.productCollection.find().toList();
-      if(mounted) {
+      if (mounted) {
         setState(() {
           _allProducts = products;
           _filteredProducts = products;
@@ -99,14 +101,18 @@ class ProductScreenState extends State<ProductScreen> {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productName = product['name'] ?? 'Sản phẩm';
     await MongoDatabase.addToCart(userId, product);
-    await updateCartBadge(); // Sửa ở đây
+    await updateCartBadge();
     widget.onProductAdded();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Đã thêm '$productName' vào giỏ hàng!"),
           backgroundColor: primaryColor,
-          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         ),
       );
     }
@@ -115,11 +121,15 @@ class ProductScreenState extends State<ProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text("Sản phẩm", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22)),
+        title: const Text(
+          "Sản phẩm",
+          style: TextStyle(
+              color: textColor, fontWeight: FontWeight.bold, fontSize: 22),
+        ),
         backgroundColor: Colors.white,
-        elevation: 0.5,
+        elevation: 0,
         centerTitle: true,
         actions: [_buildCartIcon()],
       ),
@@ -131,25 +141,37 @@ class ProductScreenState extends State<ProductScreen> {
       ),
     );
   }
-  
+
   Widget _buildCartIcon() {
     return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
+      padding: const EdgeInsets.only(right: 12.0),
       child: Stack(
         alignment: Alignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black54, size: 28),
+            icon: Icon(Icons.shopping_cart_outlined,
+                color: Colors.grey.shade700, size: 28),
             onPressed: widget.onCartIconTapped,
           ),
           if (_cartTotalQuantity > 0)
             Positioned(
-              right: 5, top: 5,
+              right: 6,
+              top: 8,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                child: Text('$_cartTotalQuantity', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                child: Text(
+                  '$_cartTotalQuantity',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
         ],
@@ -160,30 +182,66 @@ class ProductScreenState extends State<ProductScreen> {
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Tìm kiếm sản phẩm...',
-          prefixIcon: const Icon(Icons.search, color: secondaryTextColor),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: const BorderSide(color: primaryColor, width: 1.5)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide(color: Colors.grey.shade300)),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            )
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Tìm kiếm sản phẩm...',
+            hintStyle: TextStyle(color: secondaryTextColor),
+            prefixIcon:
+                Icon(Icons.search, color: secondaryTextColor, size: 22),
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20.0),
+            border: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            enabledBorder: InputBorder.none,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildBodyContent() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator(color: primaryColor));
-    if (_errorMessage.isNotEmpty) return Center(child: Padding(padding: const EdgeInsets.all(20.0), child: Text(_errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: secondaryTextColor, fontSize: 16))));
-    if (_filteredProducts.isEmpty) return Center(child: Text(_searchController.text.isNotEmpty ? "Không tìm thấy sản phẩm." : "Chưa có sản phẩm nào.", style: const TextStyle(color: secondaryTextColor, fontSize: 16)));
-    
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: primaryColor));
+    }
+    if (_errorMessage.isNotEmpty) {
+      return Center(
+          child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Text(_errorMessage,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: secondaryTextColor, fontSize: 16)),
+      ));
+    }
+    if (_filteredProducts.isEmpty) {
+      return Center(
+          child: Text(
+              _searchController.text.isNotEmpty
+                  ? "Không tìm thấy sản phẩm."
+                  : "Chưa có sản phẩm nào.",
+              style: TextStyle(color: secondaryTextColor, fontSize: 16)));
+    }
+
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.67, crossAxisSpacing: 16, mainAxisSpacing: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.7, // Tinh chỉnh tỉ lệ thẻ
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final product = _filteredProducts[index];
@@ -197,9 +255,20 @@ class ProductScreenState extends State<ProductScreen> {
     final String imageUrl = product['imageUrl'] ?? '';
     final double price = (product['price'] as num?)?.toDouble() ?? 0.0;
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18.0), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.15), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(
+        color: cardBackgroundColor,
+        borderRadius: BorderRadius.circular(16.0), // Bo góc mềm mại hơn
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08), // Bóng đổ tinh tế
+            spreadRadius: 1,
+            blurRadius: 12,
+            offset: const Offset(0, 5),
+          )
+        ],
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18.0),
+        borderRadius: BorderRadius.circular(16.0),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -219,43 +288,77 @@ class ProductScreenState extends State<ProductScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: 5,
+                  flex: 3,
                   child: Container(
                     width: double.infinity,
                     color: Colors.grey.shade200,
                     child: Hero(
                       tag: product['_id'],
                       child: imageUrl.isNotEmpty
-                          ? Image.network(imageUrl, fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
-                                return const Center(child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(primaryColor)));
+                                return const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        primaryColor),
+                                  ),
+                                );
                               },
-                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline, color: secondaryTextColor, size: 40))
-                          : const Icon(Icons.image_not_supported, color: secondaryTextColor, size: 40),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(Icons.error_outline,
+                                      color: secondaryTextColor, size: 40),
+                            )
+                          : Icon(Icons.image_not_supported,
+                              color: secondaryTextColor, size: 40),
                     ),
                   ),
                 ),
                 Expanded(
-                  flex: 4,
+                  flex: 2,
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87), maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const Spacer(),
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600, // Giảm độ đậm một chút
+                            fontSize: 14,
+                            color: textColor,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text('${price.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.w900)),
+                            Text(
+                              '${price.toStringAsFixed(0)} VNĐ',
+                              style: const TextStyle(
+                                color: primaryColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold, // Giảm độ đậm
+                              ),
+                            ),
                             Container(
-                              width: 36, height: 36,
-                              decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(10)),
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: primaryColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                               child: IconButton(
                                 onPressed: () => _handleAddToCart(product),
-                                icon: const Icon(Icons.add_shopping_cart, color: Colors.white, size: 18),
+                                icon: const Icon(Icons.add_shopping_cart,
+                                    color: Colors.white, size: 18),
                               ),
                             ),
                           ],

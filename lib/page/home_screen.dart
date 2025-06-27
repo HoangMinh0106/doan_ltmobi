@@ -40,18 +40,20 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2) {
       _cartKey.currentState?.fetchCartItems();
     }
+    // THAY ĐỔI 1: Luôn cập nhật huy hiệu khi chuyển tab
     _updateProductScreenBadge();
     setState(() {
       _selectedIndex = index;
     });
   }
   
+  // THAY ĐỔI 2: Đổi tên hàm cho rõ nghĩa
   void _updateAllCarts() {
     _cartKey.currentState?.fetchCartItems();
     _updateProductScreenBadge();
   }
   
-  // THAY ĐỔI 2: Sửa lại lời gọi hàm cho đúng tên mới
+  // THAY ĐỔI 3: Hàm này sẽ ra lệnh cho ProductScreen cập nhật huy hiệu
   void _updateProductScreenBadge() {
     _productScreenKey.currentState?.updateCartBadge();
   }
@@ -77,12 +79,13 @@ class _HomeScreenState extends State<HomeScreen> {
       ProductScreen(
         key: _productScreenKey,
         userDocument: _currentUserDocument,
-        onProductAdded: _updateAllCarts,
-        onCartIconTapped: () => _onItemTapped(2),
+        onProductAdded: _updateAllCarts, // Dùng hàm mới
+        onCartIconTapped: () => _onItemTapped(2), // Chuyển qua tab giỏ hàng
       ),
       CartScreen(
         key: _cartKey,
         userDocument: _currentUserDocument,
+        // THAY ĐỔI 4: Truyền callback vào CartScreen
         onCartUpdated: _updateProductScreenBadge,
       ),
       ProfileScreen(

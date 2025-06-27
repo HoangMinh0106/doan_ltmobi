@@ -7,10 +7,10 @@ import 'package:mongo_dart/mongo_dart.dart';
 
 class MongoDatabase {
   static var db, userCollection;
-  static var bannerCollection; //slider
-  static var categoryCollection; //cate
-  static var productCollection; //product
-  static var cartCollection; // cart
+  static var bannerCollection;
+  static var categoryCollection;
+  static var productCollection;
+  static var cartCollection;
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -36,22 +36,25 @@ class MongoDatabase {
     return arrData;
   }
 
-  static Future<void> addToCart(ObjectId userId, Map<String, dynamic> product) async {
+  // ===== HÀM addToCart ĐÃ ĐƯỢC NÂNG CẤP =====
+  static Future<void> addToCart(ObjectId userId, Map<String, dynamic> product, {int quantity = 1}) async {
     try {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
       final productId = product['_id'];
       if (cart == null) {
         await cartCollection.insertOne({
           'userId': userId,
-          'items': [{'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': 1}]
+          'items': [{'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': quantity}]
         });
       } else {
         var items = List<Map<String, dynamic>>.from(cart['items']);
         int existingItemIndex = items.indexWhere((item) => item['productId'] == productId);
         if (existingItemIndex != -1) {
-          items[existingItemIndex]['quantity'] += 1;
+          // Nếu sản phẩm đã có, cộng dồn số lượng
+          items[existingItemIndex]['quantity'] += quantity;
         } else {
-          items.add({'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': 1});
+          // Nếu sản phẩm chưa có, thêm mới với số lượng được chỉ định
+          items.add({'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': quantity});
         }
         await cartCollection.update(where.eq('userId', userId), modify.set('items', items));
       }
@@ -70,13 +73,10 @@ class MongoDatabase {
     }
   }
   
-  //lấy tổng số lượng sản phẩm 
   static Future<int> getCartTotalQuantity(ObjectId userId) async {
     try {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
-      if (cart == null || cart['items'] == null) {
-        return 0;
-      }
+      if (cart == null || cart['items'] == null) return 0;
       int totalQuantity = 0;
       final items = List<Map<String, dynamic>>.from(cart['items']);
       for (var item in items) {
@@ -91,15 +91,10 @@ class MongoDatabase {
 
   static Future<void> updateItemQuantity(ObjectId userId, ObjectId productId, int newQuantity) async {
     try {
-      var cart = await cartCollection.findOne(where.eq('userId', userId));
-      if (cart != null) {
-        var items = List<Map<String, dynamic>>.from(cart['items']);
-        int itemIndex = items.indexWhere((item) => item['productId'] == productId);
-        if (itemIndex != -1) {
-          items[itemIndex]['quantity'] = newQuantity;
-          await cartCollection.update(where.eq('userId', userId), modify.set('items', items));
-        }
-      }
+      await cartCollection.update(
+        where.eq('userId', userId).eq('items.productId', productId),
+        modify.set('items.\$.quantity', newQuantity)
+      );
     } catch (e) {
       print("Lỗi khi cập nhật số lượng: $e");
     }
