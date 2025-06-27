@@ -6,7 +6,14 @@ import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class CartScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
-  const CartScreen({Key? key, required this.userDocument}) : super(key: key);
+  // THAY ĐỔI 1: Thêm callback để thông báo cho HomeScreen
+  final VoidCallback onCartUpdated;
+
+  const CartScreen({
+    Key? key,
+    required this.userDocument,
+    required this.onCartUpdated, // Yêu cầu callback trong constructor
+  }) : super(key: key);
 
   @override
   CartScreenState createState() => CartScreenState();
@@ -17,7 +24,6 @@ class CartScreenState extends State<CartScreen> {
   bool _isLoading = true;
   double _totalPrice = 0.0;
   
-  // Màu sắc chủ đạo
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
   static const Color backgroundColor = Color(0xFFF5F5F5);
@@ -59,6 +65,8 @@ class CartScreenState extends State<CartScreen> {
         });
       }
     }
+    // THAY ĐỔI 2: Gọi callback mỗi khi giỏ hàng được fetch xong
+    widget.onCartUpdated();
   }
 
   void _updateQuantity(Map<String, dynamic> item, int newQuantity) async {
@@ -68,37 +76,31 @@ class CartScreenState extends State<CartScreen> {
     if (newQuantity > 0) {
       await MongoDatabase.updateItemQuantity(userId, productId, newQuantity);
     } else {
-      // Nếu số lượng về 0, thì xóa sản phẩm
-      _deleteItem(item, skipConfirmation: true);
-      return; // Dừng hàm ở đây
+      await MongoDatabase.removeItemFromCart(userId, productId);
     }
-    await fetchCartItems();
+    await fetchCartItems(); // Fetch lại để cập nhật UI và gọi callback
   }
   
-  void _deleteItem(Map<String, dynamic> item, {bool skipConfirmation = false}) async {
-    bool confirmDelete = skipConfirmation; // Bỏ qua xác nhận nếu giảm số lượng về 0
-
-    if (!skipConfirmation) {
-      confirmDelete = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Xác nhận xóa'),
-            content: Text('Bạn có chắc chắn muốn xóa "${item['name']}" khỏi giỏ hàng không?'),
-            actions: <Widget>[
-              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Hủy')),
-              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
-            ],
-          );
-        },
-      ) ?? false;
-    }
+  void _deleteItem(Map<String, dynamic> item) async {
+    bool confirmDelete = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Xác nhận xóa'),
+          content: Text('Bạn có chắc chắn muốn xóa "${item['name']}" khỏi giỏ hàng không?'),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Hủy')),
+            TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+          ],
+        );
+      },
+    ) ?? false;
 
     if (confirmDelete == true) {
       final userId = widget.userDocument['_id'] as mongo.ObjectId;
       final productId = item['productId'] as mongo.ObjectId;
       await MongoDatabase.removeItemFromCart(userId, productId);
-      await fetchCartItems();
+      await fetchCartItems(); // Fetch lại để cập nhật UI và gọi callback
     }
   }
 
@@ -144,7 +146,6 @@ class CartScreenState extends State<CartScreen> {
     );
   }
   
-
   Widget _buildCartItemCard(Map<String, dynamic> item) {
     final String name = item['name'] ?? 'Sản phẩm';
     final String imageUrl = item['imageUrl'] ?? '';
@@ -191,18 +192,12 @@ class CartScreenState extends State<CartScreen> {
               children: [
                 Row(
                   children: [
-                    _buildQuantityButton(
-                      icon: Icons.remove, 
-                      onPressed: () => _updateQuantity(item, quantity - 1)
-                    ),
+                    _buildQuantityButton(icon: Icons.remove, onPressed: () => _updateQuantity(item, quantity - 1)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8.0),
                       child: Text('$quantity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
-                    _buildQuantityButton(
-                      icon: Icons.add, 
-                      onPressed: () => _updateQuantity(item, quantity + 1)
-                    ),
+                    _buildQuantityButton(icon: Icons.add, onPressed: () => _updateQuantity(item, quantity + 1)),
                   ],
                 ),
                 SizedBox(
@@ -225,15 +220,8 @@ class CartScreenState extends State<CartScreen> {
     return Container(
       width: 32,
       height: 32,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 18),
-        onPressed: onPressed,
-      ),
+      decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
+      child: IconButton(padding: EdgeInsets.zero, icon: Icon(icon, size: 18), onPressed: onPressed),
     );
   }
 

@@ -11,7 +11,6 @@ class ProductScreen extends StatefulWidget {
   final VoidCallback onProductAdded;
   final VoidCallback onCartIconTapped;
 
-  // Bỏ searchController khỏi constructor
   const ProductScreen({
     Key? key,
     required this.userDocument,
@@ -20,13 +19,10 @@ class ProductScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  // THAY ĐỔI 1: Đổi State thành public để GlobalKey có thể truy cập
   ProductScreenState createState() => ProductScreenState();
 }
 
-// THAY ĐỔI 2: Đổi tên State class
 class ProductScreenState extends State<ProductScreen> {
-  // THAY ĐỔI 3: Trả lại controller cục bộ
   final TextEditingController _searchController = TextEditingController();
   
   List<Map<String, dynamic>> _allProducts = [];
@@ -42,26 +38,23 @@ class ProductScreenState extends State<ProductScreen> {
   @override
   void initState() {
     super.initState();
-    // Dùng controller cục bộ
     _searchController.addListener(_filterProducts);
     _fetchProducts();
-    _updateCartBadge();
+    updateCartBadge(); // Sửa ở đây
   }
 
   @override
   void dispose() {
-    // Hủy controller cục bộ
     _searchController.dispose();
     super.dispose();
   }
   
-  // THAY ĐỔI 4: Tạo một hàm public để HomeScreen có thể gọi
   void performSearch(String query) {
-    // Cập nhật text của controller cục bộ và tự động lọc
     _searchController.text = query;
   }
   
-  Future<void> _updateCartBadge() async {
+  // THAY ĐỔI 1: Đổi tên hàm thành public (bỏ dấu gạch dưới)
+  Future<void> updateCartBadge() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final count = await MongoDatabase.getCartTotalQuantity(userId);
     if (mounted) {
@@ -77,7 +70,7 @@ class ProductScreenState extends State<ProductScreen> {
       if(mounted) {
         setState(() {
           _allProducts = products;
-          _filteredProducts = products; // Hiển thị tất cả lúc đầu
+          _filteredProducts = products;
           _isLoading = false;
         });
       }
@@ -106,7 +99,7 @@ class ProductScreenState extends State<ProductScreen> {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productName = product['name'] ?? 'Sản phẩm';
     await MongoDatabase.addToCart(userId, product);
-    await _updateCartBadge();
+    await updateCartBadge(); // Sửa ở đây
     widget.onProductAdded();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +147,7 @@ class ProductScreenState extends State<ProductScreen> {
               right: 5, top: 5,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(10)),
                 constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 child: Text('$_cartTotalQuantity', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               ),
@@ -168,7 +161,6 @@ class ProductScreenState extends State<ProductScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
       child: TextField(
-        // Dùng controller cục bộ
         controller: _searchController,
         decoration: InputDecoration(
           hintText: 'Tìm kiếm sản phẩm...',

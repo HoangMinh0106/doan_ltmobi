@@ -22,22 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Map<String, dynamic> _currentUserDocument;
   final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
-
-  // THAY ĐỔI 1: Bỏ controller chung, thêm GlobalKey cho ProductScreen
-  // final TextEditingController _searchController = TextEditingController();
   final GlobalKey<ProductScreenState> _productScreenKey = GlobalKey<ProductScreenState>();
-
 
   @override
   void initState() {
     super.initState();
     _currentUserDocument = widget.userDocument;
-  }
-  
-  @override
-  void dispose() {
-    // Không cần dispose controller ở đây nữa
-    super.dispose();
   }
 
   void _updateUserDocument(Map<String, dynamic> newDocument) {
@@ -50,22 +40,25 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2) {
       _cartKey.currentState?.fetchCartItems();
     }
+    _updateProductScreenBadge();
     setState(() {
       _selectedIndex = index;
     });
   }
   
-  void _navigateToCartTab() {
-    _onItemTapped(2);
+  void _updateAllCarts() {
+    _cartKey.currentState?.fetchCartItems();
+    _updateProductScreenBadge();
+  }
+  
+  // THAY ĐỔI 2: Sửa lại lời gọi hàm cho đúng tên mới
+  void _updateProductScreenBadge() {
+    _productScreenKey.currentState?.updateCartBadge();
   }
 
-  // THAY ĐỔI 2: Hàm này sẽ nhận từ khóa và ra lệnh cho ProductScreen
   void _onSearchSubmitted(String query) {
-    // Chuyển đến tab sản phẩm
     _onItemTapped(1);
-    // Đợi một chút để màn hình sản phẩm có thời gian build
     Future.delayed(const Duration(milliseconds: 50), () {
-      // Dùng key để gọi hàm tìm kiếm trên ProductScreen
       _productScreenKey.currentState?.performSearch(query);
     });
   }
@@ -76,23 +69,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final String userName = email.split('@').first;
 
     final List<Widget> widgetOptions = <Widget>[
-      // Truyền callback onSearchSubmitted
       HomePageBody(
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
         onSearchSubmitted: _onSearchSubmitted,
       ),
-      
-      // Gán key và bỏ controller
       ProductScreen(
         key: _productScreenKey,
         userDocument: _currentUserDocument,
-        onProductAdded: _navigateToCartTab,
-        onCartIconTapped: _navigateToCartTab,
+        onProductAdded: _updateAllCarts,
+        onCartIconTapped: () => _onItemTapped(2),
       ),
       CartScreen(
         key: _cartKey,
-        userDocument: _currentUserDocument
+        userDocument: _currentUserDocument,
+        onCartUpdated: _updateProductScreenBadge,
       ),
       ProfileScreen(
         userDocument: _currentUserDocument,

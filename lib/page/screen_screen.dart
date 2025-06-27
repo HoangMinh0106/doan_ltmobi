@@ -18,7 +18,7 @@ class SplashScreen extends StatelessWidget {
       body: Center(
         child: Image.asset(
            "assets/logo-app.png",
-          height: 150, // Kích thước logo
+          height: 100, // Kích thước logo
         ),
       ),
     );
