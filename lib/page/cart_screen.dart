@@ -144,9 +144,7 @@ class CartScreenState extends State<CartScreen> {
     );
   }
   
-  // ======================================================================
-  // ===== GIAO DIỆN SẢN PHẨM TRONG GIỎ HÀNG ĐÃ ĐƯỢC CẬP NHẬT LẠI =====
-  // ======================================================================
+
   Widget _buildCartItemCard(Map<String, dynamic> item) {
     final String name = item['name'] ?? 'Sản phẩm';
     final String imageUrl = item['imageUrl'] ?? '';
@@ -161,7 +159,6 @@ class CartScreenState extends State<CartScreen> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
         child: Row(
-          // Thêm thuộc tính này để căn chỉnh các thành phần theo chiều dọc
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ClipRRect(
@@ -176,13 +173,12 @@ class CartScreenState extends State<CartScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            // Sử dụng Expanded và Column để Tên và Giá chiếm hết không gian còn lại
             Expanded(
               child: SizedBox(
-                height: 80, // Đặt chiều cao bằng với chiều cao của ảnh
+                height: 80, 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Phân bố đều không gian
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
                     Text('${price.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
@@ -191,7 +187,6 @@ class CartScreenState extends State<CartScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            // Nhóm bộ điều khiển số lượng và nút xóa vào một Column
             Column(
               children: [
                 Row(
@@ -210,7 +205,6 @@ class CartScreenState extends State<CartScreen> {
                     ),
                   ],
                 ),
-                // Giảm kích thước và padding của nút xóa để nó gọn hơn
                 SizedBox(
                   height: 36,
                   child: IconButton(

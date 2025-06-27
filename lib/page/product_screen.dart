@@ -9,23 +9,26 @@ import 'package:mongo_dart/mongo_dart.dart' as mongo;
 class ProductScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
   final VoidCallback onProductAdded;
-  // THAY ĐỔI 1: Thêm callback mới cho việc nhấn vào icon
   final VoidCallback onCartIconTapped;
 
+  // Bỏ searchController khỏi constructor
   const ProductScreen({
     Key? key,
     required this.userDocument,
     required this.onProductAdded,
-    // THAY ĐỔI 2: Yêu cầu callback trong constructor
     required this.onCartIconTapped,
   }) : super(key: key);
 
   @override
-  State<ProductScreen> createState() => _ProductScreenState();
+  // THAY ĐỔI 1: Đổi State thành public để GlobalKey có thể truy cập
+  ProductScreenState createState() => ProductScreenState();
 }
 
-class _ProductScreenState extends State<ProductScreen> {
+// THAY ĐỔI 2: Đổi tên State class
+class ProductScreenState extends State<ProductScreen> {
+  // THAY ĐỔI 3: Trả lại controller cục bộ
   final TextEditingController _searchController = TextEditingController();
+  
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _filteredProducts = [];
   bool _isLoading = true;
@@ -39,6 +42,7 @@ class _ProductScreenState extends State<ProductScreen> {
   @override
   void initState() {
     super.initState();
+    // Dùng controller cục bộ
     _searchController.addListener(_filterProducts);
     _fetchProducts();
     _updateCartBadge();
@@ -46,8 +50,15 @@ class _ProductScreenState extends State<ProductScreen> {
 
   @override
   void dispose() {
+    // Hủy controller cục bộ
     _searchController.dispose();
     super.dispose();
+  }
+  
+  // THAY ĐỔI 4: Tạo một hàm public để HomeScreen có thể gọi
+  void performSearch(String query) {
+    // Cập nhật text của controller cục bộ và tự động lọc
+    _searchController.text = query;
   }
   
   Future<void> _updateCartBadge() async {
@@ -63,10 +74,10 @@ class _ProductScreenState extends State<ProductScreen> {
   Future<void> _fetchProducts() async {
     try {
       final products = await MongoDatabase.productCollection.find().toList();
-      if (mounted) {
+      if(mounted) {
         setState(() {
           _allProducts = products;
-          _filteredProducts = products;
+          _filteredProducts = products; // Hiển thị tất cả lúc đầu
           _isLoading = false;
         });
       }
@@ -116,11 +127,8 @@ class _ProductScreenState extends State<ProductScreen> {
         title: const Text("Sản phẩm", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22)),
         backgroundColor: Colors.white,
         elevation: 0.5,
-        shadowColor: Colors.grey.withOpacity(0.2),
         centerTitle: true,
-        actions: [
-          _buildCartIcon()
-        ],
+        actions: [_buildCartIcon()],
       ),
       body: Column(
         children: [
@@ -139,32 +147,16 @@ class _ProductScreenState extends State<ProductScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black54, size: 28),
-            // THAY ĐỔI 3: Gọi callback khi nhấn vào icon
             onPressed: widget.onCartIconTapped,
           ),
           if (_cartTotalQuantity > 0)
             Positioned(
-              right: 5,
-              top: 5,
+              right: 5, top: 5,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Color(0xFFE57373),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
-                ),
-                child: Text(
-                  '$_cartTotalQuantity',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text('$_cartTotalQuantity', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               ),
             ),
         ],
@@ -176,6 +168,7 @@ class _ProductScreenState extends State<ProductScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
       child: TextField(
+        // Dùng controller cục bộ
         controller: _searchController,
         decoration: InputDecoration(
           hintText: 'Tìm kiếm sản phẩm...',
@@ -192,35 +185,17 @@ class _ProductScreenState extends State<ProductScreen> {
   }
 
   Widget _buildBodyContent() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: primaryColor));
-    }
-    if (_errorMessage.isNotEmpty) {
-      return Center(child: Padding(padding: const EdgeInsets.all(20.0), child: Text(_errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: secondaryTextColor, fontSize: 16))));
-    }
-    if (_filteredProducts.isEmpty) {
-      return const Center(child: Text("Không tìm thấy sản phẩm nào.", style: TextStyle(color: secondaryTextColor, fontSize: 16)));
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: primaryColor));
+    if (_errorMessage.isNotEmpty) return Center(child: Padding(padding: const EdgeInsets.all(20.0), child: Text(_errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: secondaryTextColor, fontSize: 16))));
+    if (_filteredProducts.isEmpty) return Center(child: Text(_searchController.text.isNotEmpty ? "Không tìm thấy sản phẩm." : "Chưa có sản phẩm nào.", style: const TextStyle(color: secondaryTextColor, fontSize: 16)));
+    
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.67, crossAxisSpacing: 16, mainAxisSpacing: 16),
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final product = _filteredProducts[index];
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: const Duration(milliseconds: 500),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 50 * (1 - value)),
-                child: child,
-              ),
-            );
-          },
-          child: _buildProductCard(product),
-        );
+        return _buildProductCard(product);
       },
     );
   }
@@ -284,8 +259,7 @@ class _ProductScreenState extends State<ProductScreen> {
                           children: [
                             Text('${price.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontSize: 16, fontWeight: FontWeight.w900)),
                             Container(
-                              width: 36,
-                              height: 36,
+                              width: 36, height: 36,
                               decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(10)),
                               child: IconButton(
                                 onPressed: () => _handleAddToCart(product),

@@ -21,13 +21,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Map<String, dynamic> _currentUserDocument;
-
   final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
+
+  // THAY ĐỔI 1: Bỏ controller chung, thêm GlobalKey cho ProductScreen
+  // final TextEditingController _searchController = TextEditingController();
+  final GlobalKey<ProductScreenState> _productScreenKey = GlobalKey<ProductScreenState>();
+
 
   @override
   void initState() {
     super.initState();
     _currentUserDocument = widget.userDocument;
+  }
+  
+  @override
+  void dispose() {
+    // Không cần dispose controller ở đây nữa
+    super.dispose();
   }
 
   void _updateUserDocument(Map<String, dynamic> newDocument) {
@@ -37,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
-    // Cập nhật giỏ hàng khi người dùng chủ động nhấn vào tab
     if (index == 2) {
       _cartKey.currentState?.fetchCartItems();
     }
@@ -46,9 +55,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
   
-  // Hàm để điều hướng đến tab giỏ hàng
   void _navigateToCartTab() {
     _onItemTapped(2);
+  }
+
+  // THAY ĐỔI 2: Hàm này sẽ nhận từ khóa và ra lệnh cho ProductScreen
+  void _onSearchSubmitted(String query) {
+    // Chuyển đến tab sản phẩm
+    _onItemTapped(1);
+    // Đợi một chút để màn hình sản phẩm có thời gian build
+    Future.delayed(const Duration(milliseconds: 50), () {
+      // Dùng key để gọi hàm tìm kiếm trên ProductScreen
+      _productScreenKey.currentState?.performSearch(query);
+    });
   }
 
   @override
@@ -56,17 +75,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final String email = _currentUserDocument["email"] ?? "User";
     final String userName = email.split('@').first;
 
-    // Danh sách các trang tương ứng với các tab
     final List<Widget> widgetOptions = <Widget>[
+      // Truyền callback onSearchSubmitted
       HomePageBody(
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
+        onSearchSubmitted: _onSearchSubmitted,
       ),
-      // DÒNG BỊ LỖI CỦA BẠN ĐÃ ĐƯỢC SỬA Ở ĐÂY
+      
+      // Gán key và bỏ controller
       ProductScreen(
+        key: _productScreenKey,
         userDocument: _currentUserDocument,
         onProductAdded: _navigateToCartTab,
-        // Tham số onCartIconTapped đã được thêm vào đây
         onCartIconTapped: _navigateToCartTab,
       ),
       CartScreen(
@@ -88,23 +109,11 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFFFF0F0),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 1,
-              blurRadius: 10,
-            ),
-          ],
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 10)],
         ),
         child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
           child: BottomNavigationBar(
             items: const <BottomNavigationBarItem>[
               BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Trang chủ'),

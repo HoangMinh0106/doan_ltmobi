@@ -1,3 +1,5 @@
+// lib/page/home_page_body.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -10,11 +12,14 @@ import 'package:doan_ltmobi/page/vn_location_search.dart';
 class HomePageBody extends StatefulWidget {
   final String userName;
   final String? profileImageBase64;
+  // THAY ĐỔI: Chỉ cần callback, không cần controller
+  final Function(String) onSearchSubmitted;
 
   const HomePageBody({
     Key? key,
     required this.userName,
     this.profileImageBase64,
+    required this.onSearchSubmitted,
   }) : super(key: key);
 
   @override
@@ -22,19 +27,16 @@ class HomePageBody extends StatefulWidget {
 }
 
 class _HomePageBodyState extends State<HomePageBody> {
-  // ---- DATA ----
+  // THAY ĐỔI: Tạo controller cục bộ
+  final TextEditingController _searchController = TextEditingController();
+
   late Future<List<Map<String, dynamic>>> _bannersFuture;
   late Future<List<Map<String, dynamic>>> _categoriesFuture;
-
-  // ---- SLIDER ----
   final PageController _pageController = PageController();
   int _currentBannerIndex = 0;
   Timer? _timer;
-
-  // ---- CITY ----
   String _currentCity = 'Vui lòng chọn địa chỉ của bạn';
 
-  // --- UI CONSTANTS ---
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
 
@@ -43,7 +45,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     super.initState();
     _bannersFuture = _fetchBanners();
     _categoriesFuture = _fetchCategories();
-
     _bannersFuture.then((banners) {
       if (banners.isNotEmpty) _startAutoScroll(banners.length);
     });
@@ -51,12 +52,13 @@ class _HomePageBodyState extends State<HomePageBody> {
 
   @override
   void dispose() {
+    _searchController.dispose(); // Hủy controller
     _timer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
-  /* ============== API / DB ============== */
+  // ... (các hàm khác giữ nguyên không đổi)
   Future<List<Map<String, dynamic>>> _fetchBanners() async {
     try {
       return await MongoDatabase.bannerCollection.find().toList();
@@ -75,7 +77,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     }
   }
 
-  /* ============== SLIDER auto scroll ============== */
   void _startAutoScroll(int pageCount) {
     _timer = Timer.periodic(const Duration(seconds: 4), (_) {
       _currentBannerIndex = (_currentBannerIndex + 1) % pageCount;
@@ -89,7 +90,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
   }
 
-  //chọn thành phố
   Future<void> _chooseLocation() async {
     final result = await Navigator.push(
       context,
@@ -101,39 +101,21 @@ class _HomePageBodyState extends State<HomePageBody> {
   }
 
   Widget _buildProfileAvatar() {
-    if (widget.profileImageBase64 != null &&
-        widget.profileImageBase64!.isNotEmpty) {
+    if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
       try {
         final Uint8List bytes = base64Decode(widget.profileImageBase64!);
         return CircleAvatar(radius: 24, backgroundImage: MemoryImage(bytes));
       } catch (_) {}
     }
-    return const CircleAvatar(
-      radius: 24,
-      backgroundColor: Colors.grey,
-      child: Icon(Icons.person, color: Colors.white),
-    );
+    return const CircleAvatar(radius: 24, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white));
   }
 
   Widget _buildPromoSlider() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bannersFuture,
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 204,
-            child: Center(
-              child: CircularProgressIndicator(color: primaryColor),
-            ),
-          );
-        }
-        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
-          return const SizedBox(
-            height: 204,
-            child: Center(child: Text("Không thể tải ưu đãi.")),
-          );
-        }
-
+        if (snap.connectionState == ConnectionState.waiting) return const SizedBox(height: 204, child: Center(child: CircularProgressIndicator(color: primaryColor)));
+        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) return const SizedBox(height: 204, child: Center(child: Text("Không thể tải ưu đãi.")));
         final banners = snap.data!;
         return Column(
           children: [
@@ -149,28 +131,9 @@ class _HomePageBodyState extends State<HomePageBody> {
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade200,
-                          child: const Center(
-                            child: Icon(Icons.broken_image_outlined,
-                                color: Colors.grey, size: 50),
-                          ),
-                        ),
-                        loadingBuilder: (_, child, progress) =>
-                            progress == null
-                                ? child
-                                : Center(
-                                    child: CircularProgressIndicator(
-                                      color: primaryColor,
-                                      value: progress.expectedTotalBytes != null
-                                          ? progress.cumulativeBytesLoaded /
-                                              progress.expectedTotalBytes!
-                                          : null,
-                                    ),
-                                  ),
+                      child: Image.network(url, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50))),
+                        loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: CircularProgressIndicator(color: primaryColor, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null)),
                       ),
                     ),
                   );
@@ -181,12 +144,7 @@ class _HomePageBodyState extends State<HomePageBody> {
             AnimatedSmoothIndicator(
               activeIndex: _currentBannerIndex,
               count: banners.length,
-              effect: const WormEffect(
-                dotWidth: 8,
-                dotHeight: 8,
-                activeDotColor: primaryColor,
-                dotColor: Colors.grey,
-              ),
+              effect: const WormEffect(dotWidth: 8, dotHeight: 8, activeDotColor: primaryColor, dotColor: Colors.grey),
             ),
           ],
         );
@@ -200,37 +158,24 @@ class _HomePageBodyState extends State<HomePageBody> {
         child: Column(
           children: [
             Container(
-              height: 70,
-              width: 70,
-              padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
-                  color: Color(0xFFFFF0F0), shape: BoxShape.circle),
-              child: img != null && img.isNotEmpty
-                  ? Image.network(img, fit: BoxFit.contain)
-                  : const Icon(Icons.category,
-                      size: 35, color: primaryColor),
+              height: 70, width: 70, padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(color: Color(0xFFFFF0F0), shape: BoxShape.circle),
+              child: img != null && img.isNotEmpty ? Image.network(img, fit: BoxFit.contain) : const Icon(Icons.category, size: 35, color: primaryColor),
             ),
             const SizedBox(height: 8),
-            Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
+            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
           ],
         ),
       );
 
   Widget _buildCategorySection() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Danh mục",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, "/category"),
-                child: const Text("Xem tất cả",
-                    style: TextStyle(color: primaryColor)),
-              ),
+              const Text("Danh mục", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              TextButton(onPressed: () => Navigator.pushNamed(context, "/category"), child: const Text("Xem tất cả", style: TextStyle(color: primaryColor))),
             ],
           ),
           const SizedBox(height: 12),
@@ -239,27 +184,20 @@ class _HomePageBodyState extends State<HomePageBody> {
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _categoriesFuture,
               builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child:
-                          CircularProgressIndicator(color: primaryColor));
-                }
-                if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
-                  return const Center(child: Text("Không thể tải danh mục."));
-                }
-
+                if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: primaryColor));
+                if (snap.hasError || !snap.hasData || snap.data!.isEmpty) return const Center(child: Text("Không thể tải danh mục."));
                 final cats = snap.data!;
                 return ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: cats.length,
-                  itemBuilder: (_, i) =>
-                      _buildCategoryItem(cats[i]['name'] ?? 'N/A', cats[i]['imageUrl']),
+                  itemBuilder: (_, i) => _buildCategoryItem(cats[i]['name'] ?? 'N/A', cats[i]['imageUrl']),
                 );
               },
             ),
           ),
         ],
       );
+
 
   @override
   Widget build(BuildContext context) {
@@ -277,33 +215,15 @@ class _HomePageBodyState extends State<HomePageBody> {
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.location_on, color: primaryColor, size: 20),
                         const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            _currentCity,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
+                        Flexible(child: Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1)),
                         const SizedBox(width: 4), 
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: primaryColor,
-                        ),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: primaryColor),
                       ],
                     ),
                   ),
@@ -311,53 +231,35 @@ class _HomePageBodyState extends State<HomePageBody> {
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-          Text("Xin chào,",
-              style: TextStyle(fontSize: 22, color: Colors.grey.shade600)),
-          Text("${widget.userName}!",
-              style:
-                  const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-
+          Text("Xin chào,", style: TextStyle(fontSize: 22, color: Colors.grey.shade600)),
+          Text("${widget.userName}!", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           TextField(
+            // Dùng controller cục bộ và callback onSubmitted
+            controller: _searchController,
+            onSubmitted: widget.onSearchSubmitted,
             decoration: InputDecoration(
               hintText: 'Tìm kiếm sản phẩm, dịch vụ...',
               prefixIcon: const Icon(Icons.search, color: secondaryTextColor),
               filled: true,
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: const BorderSide(color: primaryColor, width: 1.5),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: const BorderSide(color: primaryColor, width: 1.5)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide(color: Colors.grey.shade300)),
             ),
           ),
-
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Ưu đãi đặc biệt",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              TextButton(
-                onPressed: () {},
-                child: const Text("Xem tất cả",
-                    style: TextStyle(color: primaryColor)),
-              ),
+              const Text("Ưu đãi đặc biệt", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              TextButton(onPressed: () {}, child: const Text("Xem tất cả", style: TextStyle(color: primaryColor))),
             ],
           ),
           const SizedBox(height: 12),
           _buildPromoSlider(),
-
           const SizedBox(height: 24),
           _buildCategorySection(),
         ],
