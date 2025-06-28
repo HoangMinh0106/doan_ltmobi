@@ -8,10 +8,11 @@ import 'package:elegant_notification/elegant_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mongo_dart/mongo_dart.dart' as M;
+import 'package:shared_preferences/shared_preferences.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
-  final Function(Map<String, dynamic>) onProfileUpdated; // Callback
+  final Function(Map<String, dynamic>) onProfileUpdated;
   const ProfileScreen({Key? key, required this.userDocument, required this.onProfileUpdated}) : super(key: key);
 
   @override
@@ -98,6 +99,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    // Xóa email đã lưu trong bộ nhớ
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_email');
+    
+    // Quay về màn hình đăng nhập
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
+    }
+  }
 
   void _showLogoutDialog() {
     showDialog(
@@ -107,7 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20.0),
           ),
-          icon: Icon(Icons.logout_rounded, color: Color(0xFFE57373), size: 48),
+          icon: const Icon(Icons.logout_rounded, color: Color(0xFFE57373), size: 48),
           title: const Text(
             'Xác nhận đăng xuất',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -137,20 +152,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFE57373),
+                      backgroundColor: const Color(0xFFE57373),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                        shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        (Route<dynamic> route) => false,
-                      );
-                    },
+                    onPressed: _logout, // THAY ĐỔI: Gọi hàm _logout mới
                     child: const Text('Đăng xuất', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),

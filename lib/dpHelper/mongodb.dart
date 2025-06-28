@@ -11,6 +11,7 @@ class MongoDatabase {
   static var categoryCollection;
   static var productCollection;
   static var cartCollection;
+  static var orderCollection;
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -21,6 +22,7 @@ class MongoDatabase {
     categoryCollection = db.collection("categories");
     productCollection = db.collection("products");
     cartCollection = db.collection("carts");
+    orderCollection = db.collection("orders"); 
   }
 
   static Future<void> insertUser(String email, String password) async {
@@ -36,7 +38,6 @@ class MongoDatabase {
     return arrData;
   }
 
-  // ===== HÀM addToCart ĐÃ ĐƯỢC NÂNG CẤP =====
   static Future<void> addToCart(ObjectId userId, Map<String, dynamic> product, {int quantity = 1}) async {
     try {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
@@ -50,10 +51,8 @@ class MongoDatabase {
         var items = List<Map<String, dynamic>>.from(cart['items']);
         int existingItemIndex = items.indexWhere((item) => item['productId'] == productId);
         if (existingItemIndex != -1) {
-          // Nếu sản phẩm đã có, cộng dồn số lượng
           items[existingItemIndex]['quantity'] += quantity;
         } else {
-          // Nếu sản phẩm chưa có, thêm mới với số lượng được chỉ định
           items.add({'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': quantity});
         }
         await cartCollection.update(where.eq('userId', userId), modify.set('items', items));
@@ -105,6 +104,43 @@ class MongoDatabase {
       await cartCollection.update(where.eq('userId', userId), modify.pull('items', {'productId': productId}));
     } catch (e) {
       print("Lỗi khi xóa sản phẩm khỏi giỏ hàng: $e");
+    }
+  }
+
+  static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
+    try {
+      final orderDocument = {
+        '_id': ObjectId(),
+        'userId': userId,
+        'products': cartItems,
+        'shippingAddress': shippingAddress,
+        'totalPrice': totalPrice,
+        'orderDate': DateTime.now(),
+        'status': 'Pending',
+      };
+      await orderCollection.insertOne(orderDocument);
+    } catch (e) {
+      print("Lỗi khi tạo đơn hàng: $e");
+      rethrow;
+    }
+  }
+
+  static Future<void> clearCart(ObjectId userId) async {
+    try {
+      await cartCollection.update(where.eq('userId', userId), modify.set('items', []));
+    } catch (e) {
+      print("Lỗi khi xóa giỏ hàng: $e");
+    }
+  }
+
+  // --- THÊM MỚI HÀM NÀY ---
+  /// Xóa một đơn hàng dựa trên ID của nó.
+  static Future<void> deleteOrder(ObjectId orderId) async {
+    try {
+      await orderCollection.remove(where.id(orderId));
+    } catch (e) {
+      print("Lỗi khi xóa đơn hàng: $e");
+      rethrow;
     }
   }
 }

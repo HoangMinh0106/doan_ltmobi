@@ -15,12 +15,16 @@ class HomePageBody extends StatefulWidget {
   final String userName;
   final String? profileImageBase64;
   final Function(String) onSearchSubmitted;
+  final String initialAddress; // THÊM MỚI
+  final Function(String) onAddressChanged; // THÊM MỚI
 
   const HomePageBody({
     Key? key,
     required this.userName,
     this.profileImageBase64,
     required this.onSearchSubmitted,
+    required this.initialAddress, // THÊM MỚI
+    required this.onAddressChanged, // THÊM MỚI
   }) : super(key: key);
 
   @override
@@ -34,7 +38,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   final PageController _pageController = PageController();
   int _currentBannerIndex = 0;
   Timer? _timer;
-  String _currentCity = 'Vui lòng chọn địa chỉ của bạn';
+  late String _currentCity; // CẬP NHẬT
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
@@ -42,6 +46,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   @override
   void initState() {
     super.initState();
+    _currentCity = widget.initialAddress; // CẬP NHẬT: Lấy địa chỉ ban đầu
     _bannersFuture = _fetchBanners();
     _categoriesFuture = _fetchCategories();
     _bannersFuture.then((banners) {
@@ -49,6 +54,8 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
   }
 
+  // ... (Giữ nguyên các hàm khác như dispose, _fetchBanners, _fetchCategories, _startAutoScroll)
+  
   @override
   void dispose() {
     _searchController.dispose();
@@ -87,7 +94,8 @@ class _HomePageBodyState extends State<HomePageBody> {
       }
     });
   }
-
+  
+  // CẬP NHẬT hàm _chooseLocation
   Future<void> _chooseLocation() async {
     final result = await Navigator.push(
       context,
@@ -95,9 +103,11 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
     if (result != null && mounted) {
       setState(() => _currentCity = result as String);
+      widget.onAddressChanged(_currentCity); // THÊM MỚI: Gọi callback để cập nhật state ở HomeScreen
     }
   }
 
+  // ... (Giữ nguyên các hàm build khác)
   Widget _buildProfileAvatar() {
     if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
       try {
@@ -107,8 +117,7 @@ class _HomePageBodyState extends State<HomePageBody> {
     }
     return const CircleAvatar(radius: 24, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white));
   }
-
-  // ===== WIDGET SLIDER ĐÃ ĐƯỢC CẬP NHẬT =====
+  
   Widget _buildPromoSlider() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bannersFuture,

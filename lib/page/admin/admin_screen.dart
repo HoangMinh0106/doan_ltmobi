@@ -3,15 +3,15 @@
 import 'package:doan_ltmobi/page/admin/user_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/category_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/product_management_screen.dart';
-// Import trang quản lý ưu đãi mới
 import 'package:doan_ltmobi/page/admin/promotion_management_screen.dart';
+// THÊM MỚI: Import màn hình quản lý đơn hàng
+import 'package:doan_ltmobi/page/admin/order_management_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({Key? key}) : super(key: key);
 
-  // Widget để tạo một thẻ chức năng
   Widget _buildDashboardCard({
     required BuildContext context,
     required IconData icon,
@@ -19,6 +19,7 @@ class AdminScreen extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
+    // ... (Hàm này giữ nguyên, không thay đổi)
     return Card(
       elevation: 4.0,
       shape: RoundedRectangleBorder(
@@ -69,7 +70,7 @@ class AdminScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(
-          crossAxisCount: 2, // Hiển thị 2 cột
+          crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           children: <Widget>[
@@ -85,7 +86,7 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-             _buildDashboardCard(
+            _buildDashboardCard(
               context: context,
               icon: Icons.category,
               title: 'Quản lý Danh Mục',
@@ -97,14 +98,25 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-            // ===== THAY ĐỔI Ở ĐÂY =====
+            // THÊM MỚI: Thẻ chức năng quản lý đơn hàng
             _buildDashboardCard(
               context: context,
-              icon: Icons.campaign_outlined, // Đổi icon cho phù hợp
-              title: 'Quản lý Ưu đãi', // Đổi tên
+              icon: Icons.receipt_long_outlined, // Icon cho đơn hàng
+              title: 'Quản lý Đơn hàng',
+              color: Colors.red,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrderManagementScreen()),
+                );
+              },
+            ),
+            _buildDashboardCard(
+              context: context,
+              icon: Icons.campaign_outlined,
+              title: 'Quản lý Ưu đãi',
               color: Colors.teal,
               onTap: () {
-                // Điều hướng đến trang quản lý ưu đãi mới
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const PromotionManagementScreen()),

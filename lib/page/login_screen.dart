@@ -1,4 +1,4 @@
-// file: lib/page/login_screen.dart
+// lib/page/login_screen.dart
 
 import 'package:doan_ltmobi/page/forgot_password_screen.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import 'package:doan_ltmobi/page/register_screen.dart';
 import 'package:doan_ltmobi/page/home_screen.dart';
 import 'package:doan_ltmobi/page/admin/admin_screen.dart';
 import 'package:elegant_notification/elegant_notification.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // THÊM MỚI
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,14 +37,18 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       if (userDocument != null) {
+        // THÊM MỚI: Lưu email vào bộ nhớ sau khi đăng nhập thành công
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_email', email);
+
         final userRole = userDocument["role"];
+        if (!mounted) return;
         if (userRole == "admin") {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AdminScreen()),
           );
         } else {
-          // *** THAY ĐỔI QUAN TRỌNG: Truyền toàn bộ document sang HomeScreen ***
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

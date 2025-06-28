@@ -5,6 +5,7 @@ import 'package:doan_ltmobi/page/profile_screen.dart';
 import 'package:doan_ltmobi/page/product_screen.dart';
 import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // THÊM MỚI: Cần thiết để thoát ứng dụng
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
@@ -22,12 +23,21 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Map<String, dynamic> _currentUserDocument;
   final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
-  final GlobalKey<ProductScreenState> _productScreenKey = GlobalKey<ProductScreenState>();
+  final GlobalKey<ProductScreenState> _productScreenKey =
+      GlobalKey<ProductScreenState>();
+
+  String _selectedAddress = 'Vui lòng chọn địa chỉ của bạn!';
 
   @override
   void initState() {
     super.initState();
     _currentUserDocument = widget.userDocument;
+  }
+
+  void _updateAddress(String newAddress) {
+    setState(() {
+      _selectedAddress = newAddress;
+    });
   }
 
   void _updateUserDocument(Map<String, dynamic> newDocument) {
@@ -40,20 +50,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2) {
       _cartKey.currentState?.fetchCartItems();
     }
-    // THAY ĐỔI 1: Luôn cập nhật huy hiệu khi chuyển tab
     _updateProductScreenBadge();
     setState(() {
       _selectedIndex = index;
     });
   }
-  
-  // THAY ĐỔI 2: Đổi tên hàm cho rõ nghĩa
+
   void _updateAllCarts() {
     _cartKey.currentState?.fetchCartItems();
     _updateProductScreenBadge();
   }
-  
-  // THAY ĐỔI 3: Hàm này sẽ ra lệnh cho ProductScreen cập nhật huy hiệu
+
   void _updateProductScreenBadge() {
     _productScreenKey.currentState?.updateCartBadge();
   }
@@ -63,6 +70,28 @@ class _HomeScreenState extends State<HomeScreen> {
     Future.delayed(const Duration(milliseconds: 50), () {
       _productScreenKey.currentState?.performSearch(query);
     });
+  }
+
+  Future<bool> _showExitConfirmationDialog() async {
+    return await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xác nhận thoát'),
+        content: const Text('Bạn có chắc chắn muốn thoát ứng dụng không?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Trả về false -> không thoát
+            child: const Text('Hủy',style: TextStyle(color: ProductScreenState.primaryColor),),
+          ),
+          TextButton(
+            onPressed: () {
+              SystemNavigator.pop();
+            },
+            child: const Text('Thoát',style: TextStyle(color: ProductScreenState.primaryColor),),
+          ),
+        ],
+      ),
+    ) ?? false; 
   }
 
   @override
@@ -75,18 +104,20 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
         onSearchSubmitted: _onSearchSubmitted,
+        initialAddress: _selectedAddress,
+        onAddressChanged: _updateAddress,
       ),
       ProductScreen(
         key: _productScreenKey,
         userDocument: _currentUserDocument,
-        onProductAdded: _updateAllCarts, // Dùng hàm mới
-        onCartIconTapped: () => _onItemTapped(2), // Chuyển qua tab giỏ hàng
+        onProductAdded: _updateAllCarts,
+        onCartIconTapped: () => _onItemTapped(2),
       ),
       CartScreen(
         key: _cartKey,
         userDocument: _currentUserDocument,
-        // THAY ĐỔI 4: Truyền callback vào CartScreen
         onCartUpdated: _updateProductScreenBadge,
+        selectedAddress: _selectedAddress,
       ),
       ProfileScreen(
         userDocument: _currentUserDocument,
@@ -94,35 +125,58 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: widgetOptions,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF0F0),
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 10)],
+    // CẬP NHẬT: Bọc Scaffold bằng WillPopScope
+    return WillPopScope(
+      onWillPop: _showExitConfirmationDialog,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: widgetOptions,
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-          child: BottomNavigationBar(
-            items: const <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Trang chủ'),
-              BottomNavigationBarItem(icon: Icon(Icons.widgets_outlined), activeIcon: Icon(Icons.widgets), label: 'Sản Phẩm'),
-              BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Giỏ hàng'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Hồ sơ'),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF0F0),
+            borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 10)
             ],
-            currentIndex: _selectedIndex,
-            selectedItemColor: const Color(0xFFE57373),
-            unselectedItemColor: Colors.grey,
-            onTap: _onItemTapped,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            showUnselectedLabels: true,
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+            child: BottomNavigationBar(
+              items: const <BottomNavigationBarItem>[
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.home_outlined),
+                    activeIcon: Icon(Icons.home),
+                    label: 'Trang chủ'),
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.widgets_outlined),
+                    activeIcon: Icon(Icons.widgets),
+                    label: 'Sản Phẩm'),
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.shopping_cart_outlined),
+                    activeIcon: Icon(Icons.shopping_cart),
+                    label: 'Giỏ hàng'),
+                BottomNavigationBarItem(
+                    icon: Icon(Icons.person_outline),
+                    activeIcon: Icon(Icons.person),
+                    label: 'Hồ sơ'),
+              ],
+              currentIndex: _selectedIndex,
+              selectedItemColor: const Color(0xFFE57373),
+              unselectedItemColor: Colors.grey,
+              onTap: _onItemTapped,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              showUnselectedLabels: true,
+            ),
           ),
         ),
       ),
