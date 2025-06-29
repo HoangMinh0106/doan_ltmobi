@@ -3,8 +3,8 @@
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/success_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'vnpay_service.dart';
+//import 'package:qr_flutter/qr_flutter.dart';
+//import 'vnpay_service.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:flutter_paypal_payment/flutter_paypal_payment.dart';
 
