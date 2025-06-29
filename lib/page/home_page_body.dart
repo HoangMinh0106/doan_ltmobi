@@ -15,16 +15,18 @@ class HomePageBody extends StatefulWidget {
   final String userName;
   final String? profileImageBase64;
   final Function(String) onSearchSubmitted;
-  final String initialAddress; // THÊM MỚI
-  final Function(String) onAddressChanged; // THÊM MỚI
+  final Function(String?) onCategorySelected; // THÊM MỚI: Khai báo tham số
+  final String initialAddress;
+  final Function(String) onAddressChanged;
 
   const HomePageBody({
     Key? key,
     required this.userName,
     this.profileImageBase64,
     required this.onSearchSubmitted,
-    required this.initialAddress, // THÊM MỚI
-    required this.onAddressChanged, // THÊM MỚI
+    required this.onCategorySelected, // THÊM MỚI: Thêm vào constructor
+    required this.initialAddress,
+    required this.onAddressChanged,
   }) : super(key: key);
 
   @override
@@ -38,7 +40,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   final PageController _pageController = PageController();
   int _currentBannerIndex = 0;
   Timer? _timer;
-  late String _currentCity; // CẬP NHẬT
+  late String _currentCity;
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
@@ -46,7 +48,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   @override
   void initState() {
     super.initState();
-    _currentCity = widget.initialAddress; // CẬP NHẬT: Lấy địa chỉ ban đầu
+    _currentCity = widget.initialAddress;
     _bannersFuture = _fetchBanners();
     _categoriesFuture = _fetchCategories();
     _bannersFuture.then((banners) {
@@ -54,8 +56,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
   }
 
-  // ... (Giữ nguyên các hàm khác như dispose, _fetchBanners, _fetchCategories, _startAutoScroll)
-  
   @override
   void dispose() {
     _searchController.dispose();
@@ -95,7 +95,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
   }
   
-  // CẬP NHẬT hàm _chooseLocation
   Future<void> _chooseLocation() async {
     final result = await Navigator.push(
       context,
@@ -103,92 +102,42 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
     if (result != null && mounted) {
       setState(() => _currentCity = result as String);
-      widget.onAddressChanged(_currentCity); // THÊM MỚI: Gọi callback để cập nhật state ở HomeScreen
+      widget.onAddressChanged(_currentCity);
     }
   }
 
-  // ... (Giữ nguyên các hàm build khác)
-  Widget _buildProfileAvatar() {
-    if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
-      try {
-        final Uint8List bytes = base64Decode(widget.profileImageBase64!);
-        return CircleAvatar(radius: 24, backgroundImage: MemoryImage(bytes));
-      } catch (_) {}
-    }
-    return const CircleAvatar(radius: 24, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white));
-  }
-  
-  Widget _buildPromoSlider() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _bannersFuture,
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 204, child: Center(child: CircularProgressIndicator(color: primaryColor)));
-        }
-        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
-          return const SizedBox(height: 204, child: Center(child: Text("Không thể tải ưu đãi.")));
-        }
-        final banners = snap.data!;
-        return Column(
-          children: [
-            SizedBox(
-              height: 204,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: banners.length,
-                onPageChanged: (i) => setState(() => _currentBannerIndex = i),
-                itemBuilder: (_, i) {
-                  final banner = banners[i];
-                  final url = banner['imageUrl'] ?? '';
-                  // Bọc trong InkWell để có thể nhấn vào
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PromotionDetailScreen(promotion: banner),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.network(url, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50))),
-                          loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: CircularProgressIndicator(color: primaryColor, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null)),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+  // SỬA ĐỔI: Thêm sự kiện onTap để gọi callback
+  Widget _buildCategoryItem(Map<String, dynamic> category) => GestureDetector(
+        onTap: () {
+          final categoryId = category['_id']?.toHexString();
+          if (categoryId != null) {
+            widget.onCategorySelected(categoryId);
+          }
+        },
+        child: Container(
+          color: Colors.transparent, // for hit testing
+          width: 90,
+          margin: const EdgeInsets.only(right: 12),
+          child: Column(
+            children: [
+              Container(
+                height: 70,
+                width: 70,
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                    color: Color(0xFFFFF0F0), shape: BoxShape.circle),
+                child: (category['imageUrl'] != null && category['imageUrl'].isNotEmpty)
+                    ? Image.network(category['imageUrl'], fit: BoxFit.contain)
+                    : const Icon(Icons.category, size: 35, color: primaryColor),
               ),
-            ),
-            const SizedBox(height: 12),
-            AnimatedSmoothIndicator(
-              activeIndex: _currentBannerIndex,
-              count: banners.length,
-              effect: const WormEffect(dotWidth: 8, dotHeight: 8, activeDotColor: primaryColor, dotColor: Colors.grey),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildCategoryItem(String name, String? img) => Container(
-        width: 90,
-        margin: const EdgeInsets.only(right: 12),
-        child: Column(
-          children: [
-            Container(
-              height: 70, width: 70, padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(color: Color(0xFFFFF0F0), shape: BoxShape.circle),
-              child: img != null && img.isNotEmpty ? Image.network(img, fit: BoxFit.contain) : const Icon(Icons.category, size: 35, color: primaryColor),
-            ),
-            const SizedBox(height: 8),
-            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))
-          ],
+              const SizedBox(height: 8),
+              Text(category['name'] ?? 'N/A',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 13))
+            ],
+          ),
         ),
       );
 
@@ -198,8 +147,13 @@ class _HomePageBodyState extends State<HomePageBody> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Danh mục", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () => Navigator.pushNamed(context, "/category"), child: const Text("Xem tất cả", style: TextStyle(color: primaryColor))),
+              const Text("Danh mục",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              // SỬA ĐỔI: Nút "Xem tất cả" sẽ gọi callback với giá trị null (để hiển thị tất cả)
+              TextButton(
+                  onPressed: () => widget.onCategorySelected(null),
+                  child: const Text("Xem tất cả",
+                      style: TextStyle(color: primaryColor))),
             ],
           ),
           const SizedBox(height: 12),
@@ -214,7 +168,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                 return ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: cats.length,
-                  itemBuilder: (_, i) => _buildCategoryItem(cats[i]['name'] ?? 'N/A', cats[i]['imageUrl']),
+                  itemBuilder: (_, i) => _buildCategoryItem(cats[i]),
                 );
               },
             ),
@@ -277,7 +231,6 @@ class _HomePageBodyState extends State<HomePageBody> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Ưu đãi đặc biệt", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              // ===== NÚT "XEM TẤT CẢ" ĐÃ ĐƯỢC CẬP NHẬT =====
               TextButton(
                 onPressed: () {
                   Navigator.push(
@@ -295,6 +248,73 @@ class _HomePageBodyState extends State<HomePageBody> {
           _buildCategorySection(),
         ],
       ),
+    );
+  }
+  
+  Widget _buildProfileAvatar() {
+    if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
+      try {
+        final Uint8List bytes = base64Decode(widget.profileImageBase64!);
+        return CircleAvatar(radius: 24, backgroundImage: MemoryImage(bytes));
+      } catch (_) {}
+    }
+    return const CircleAvatar(radius: 24, backgroundColor: Colors.grey, child: Icon(Icons.person, color: Colors.white));
+  }
+  
+  Widget _buildPromoSlider() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _bannersFuture,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const SizedBox(height: 204, child: Center(child: CircularProgressIndicator(color: primaryColor)));
+        }
+        if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
+          return const SizedBox(height: 204, child: Center(child: Text("Không thể tải ưu đãi.")));
+        }
+        final banners = snap.data!;
+        return Column(
+          children: [
+            SizedBox(
+              height: 204,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: banners.length,
+                onPageChanged: (i) => setState(() => _currentBannerIndex = i),
+                itemBuilder: (_, i) {
+                  final banner = banners[i];
+                  final url = banner['imageUrl'] ?? '';
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PromotionDetailScreen(promotion: banner),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(url, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200, child: const Center(child: Icon(Icons.broken_image_outlined, color: Colors.grey, size: 50))),
+                          loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: CircularProgressIndicator(color: primaryColor, value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null)),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            AnimatedSmoothIndicator(
+              activeIndex: _currentBannerIndex,
+              count: banners.length,
+              effect: const WormEffect(dotWidth: 8, dotHeight: 8, activeDotColor: primaryColor, dotColor: Colors.grey),
+            ),
+          ],
+        );
+      },
     );
   }
 }

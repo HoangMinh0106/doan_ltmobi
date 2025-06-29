@@ -50,6 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2) {
       _cartKey.currentState?.fetchCartItems();
     }
+    if (_selectedIndex == 1 && index != 1) {
+       _productScreenKey.currentState?.filterByCategory(null);
+    }
     _updateProductScreenBadge();
     setState(() {
       _selectedIndex = index;
@@ -75,6 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _onItemTapped(1);
     Future.delayed(const Duration(milliseconds: 50), () {
       _productScreenKey.currentState?.performSearch(query);
+    });
+  }
+  
+  void _onCategorySelected(String? categoryId) {
+    setState(() {
+      _selectedIndex = 1;
+    });
+    Future.delayed(const Duration(milliseconds: 50), () {
+      _productScreenKey.currentState?.filterByCategory(categoryId);
     });
   }
 
@@ -110,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: userName,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
         onSearchSubmitted: _onSearchSubmitted,
+        onCategorySelected: _onCategorySelected,
         initialAddress: _selectedAddress,
         onAddressChanged: _updateAddress,
       ),
@@ -118,6 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
         userDocument: _currentUserDocument,
         onProductAdded: _updateAllCarts,
         onCartIconTapped: () => _onItemTapped(2),
+        // THÊM MỚI: Truyền địa chỉ đã chọn vào ProductScreen
+        selectedAddress: _selectedAddress,
       ),
       CartScreen(
         key: _cartKey,
