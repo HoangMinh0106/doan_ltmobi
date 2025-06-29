@@ -30,6 +30,10 @@ dependencies:        # <-- CHỈ MỘT khối dependencies
   
   qr_flutter: ^4.1.0
 
+  flutter_paypal_payment: ^1.0.6
+
+  flutter_inappwebview: ^6.0.0
+
 
   
 

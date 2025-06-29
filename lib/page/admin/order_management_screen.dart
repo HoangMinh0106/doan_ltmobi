@@ -157,13 +157,11 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                           ),
                         ),
                       ),
-                      // --- THAY ĐỔI GIAO DIỆN Ở ĐÂY ---
                       SizedBox(
                         width: 150,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            // Dropdown để đổi trạng thái
                             DropdownButton<String>(
                               value: currentStatus,
                               items: statusMap.keys.map((String key) {

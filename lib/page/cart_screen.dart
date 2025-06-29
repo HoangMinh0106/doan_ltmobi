@@ -8,13 +8,15 @@ import 'package:mongo_dart/mongo_dart.dart' as mongo;
 class CartScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
   final VoidCallback onCartUpdated;
-  final String selectedAddress; // THÊM MỚI
+  final String selectedAddress;
+  final VoidCallback onCheckoutSuccess;
 
   const CartScreen({
     Key? key,
     required this.userDocument,
     required this.onCartUpdated,
-    required this.selectedAddress, // THÊM MỚI
+    required this.selectedAddress,
+    required this.onCheckoutSuccess,
   }) : super(key: key);
 
   @override
@@ -22,11 +24,9 @@ class CartScreen extends StatefulWidget {
 }
 
 class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
-  // ... (Giữ nguyên toàn bộ các biến và hàm logic)
   List<Map<String, dynamic>> _cartItems = [];
   bool _isLoading = true;
   double _totalPrice = 0.0;
-
   late AnimationController _listAnimationController;
 
   static const Color primaryColor = Color(0xFFE57373);
@@ -51,13 +51,9 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
 
   Future<void> fetchCartItems() async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() { _isLoading = true; });
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final cartData = await MongoDatabase.getCart(userId);
-
     if (cartData != null && cartData['items'] != null) {
       final items = List<Map<String, dynamic>>.from(cartData['items']);
       _calculateTotal(items);
@@ -93,7 +89,6 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
   void _updateQuantity(Map<String, dynamic> item, int newQuantity) async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productId = item['productId'] as mongo.ObjectId;
-
     if (newQuantity > 0) {
       await MongoDatabase.updateItemQuantity(userId, productId, newQuantity);
     } else {
@@ -103,44 +98,24 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
     await fetchCartItems();
   }
 
-  void _deleteItem(
-    Map<String, dynamic> item, {
-    bool skipConfirmation = false,
-  }) async {
+  void _deleteItem(Map<String, dynamic> item, { bool skipConfirmation = false }) async {
     bool confirmDelete = skipConfirmation;
-
     if (!skipConfirmation) {
-      confirmDelete =
-          await showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                title: const Text('Xác nhận xóa'),
-                content: Text(
-                  'Bạn có chắc chắn muốn xóa "${item['name']}" khỏi giỏ hàng không?',
-                ),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Hủy'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text(
-                      'Xóa',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ) ??
-          false;
+      confirmDelete = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            title: const Text('Xác nhận xóa'),
+            content: Text('Bạn có chắc chắn muốn xóa "${item['name']}" khỏi giỏ hàng không?'),
+            actions: <Widget>[
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Hủy')),
+              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+            ],
+          );
+        },
+      ) ?? false;
     }
-
     if (confirmDelete == true) {
       final userId = widget.userDocument['_id'] as mongo.ObjectId;
       final productId = item['productId'] as mongo.ObjectId;
@@ -148,51 +123,36 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
       await fetchCartItems();
     }
   }
-  // CẬP NHẬT hàm build của nút Thanh toán
+  
+  void _handleOrderPlaced() {
+    fetchCartItems();
+    widget.onCheckoutSuccess();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          "Giỏ hàng của bạn",
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
-        ),
+        title: const Text("Giỏ hàng của bạn", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 22)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black54),
-            onPressed: fetchCartItems,
-          ),
-        ],
+        actions: [ IconButton(icon: const Icon(Icons.refresh, color: Colors.black54), onPressed: fetchCartItems) ],
       ),
       body: _buildBodyContent(),
       bottomNavigationBar: _buildCheckoutSection(),
     );
   }
-   Widget _buildCheckoutSection() {
+
+  Widget _buildCheckoutSection() {
     if (_cartItems.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 5,
-            blurRadius: 15,
-          ),
-        ],
+        borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+        boxShadow: [ BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 5, blurRadius: 15) ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -200,56 +160,24 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Tạm tính',
-                style: TextStyle(color: secondaryTextColor, fontSize: 16),
-              ),
-              Text(
-                '${_totalPrice.toStringAsFixed(0)} VNĐ',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              const Text('Tạm tính', style: TextStyle(color: secondaryTextColor, fontSize: 16)),
+              Text('${_totalPrice.toStringAsFixed(0)} VNĐ', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Phí giao hàng',
-                style: TextStyle(color: secondaryTextColor, fontSize: 16),
-              ),
-              Text(
-                'Miễn phí',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.green.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              const Text('Phí giao hàng', style: TextStyle(color: secondaryTextColor, fontSize: 16)),
+              Text('Miễn phí', style: TextStyle(fontSize: 16, color: Colors.green.shade600, fontWeight: FontWeight.w500)),
             ],
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12.0),
-            child: Divider(),
-          ),
+          const Padding(padding: EdgeInsets.symmetric(vertical: 12.0), child: Divider()),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Tổng cộng',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                '${_totalPrice.toStringAsFixed(0)} VNĐ',
-                style: const TextStyle(
-                  color: primaryColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const Text('Tổng cộng', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('${_totalPrice.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontSize: 22, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 20),
@@ -262,10 +190,7 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
                     userDocument: widget.userDocument,
                     cartItems: _cartItems,
                     totalPrice: _totalPrice,
-                    onOrderPlaced: () {
-                      fetchCartItems();
-                    },
-                    // CẬP NHẬT: Truyền địa chỉ sang màn hình checkout
+                    onOrderPlaced: _handleOrderPlaced,
                     shippingAddress: widget.selectedAddress,
                   ),
                 ),
@@ -274,30 +199,20 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
               elevation: 5,
               shadowColor: primaryColor.withOpacity(0.4),
             ),
-            child: const Text(
-              'Thanh toán',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text('Thanh toán', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
+
   Widget _buildBodyContent() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: primaryColor),
-      );
+      return const Center(child: CircularProgressIndicator(color: primaryColor));
     }
     if (_cartItems.isEmpty) {
       return _buildEmptyCart();
@@ -308,30 +223,9 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
       itemBuilder: (context, index) {
         final item = _cartItems[index];
         return FadeTransition(
-          opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-            CurvedAnimation(
-              parent: _listAnimationController,
-              curve: Interval(
-                (1 / _cartItems.length) * index,
-                1.0,
-                curve: Curves.easeOut,
-              ),
-            ),
-          ),
+          opacity: Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _listAnimationController, curve: Interval((1 / _cartItems.length) * index, 1.0, curve: Curves.easeOut))),
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.5),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: _listAnimationController,
-                curve: Interval(
-                  (1 / _cartItems.length) * index,
-                  1.0,
-                  curve: Curves.easeOut,
-                ),
-              ),
-            ),
+            position: Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(CurvedAnimation(parent: _listAnimationController, curve: Interval((1 / _cartItems.length) * index, 1.0, curve: Curves.easeOut))),
             child: _buildCartItemCard(item),
           ),
         );
@@ -344,25 +238,11 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.remove_shopping_cart_outlined,
-            size: 120,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.remove_shopping_cart_outlined, size: 120, color: Colors.grey.shade300),
           const SizedBox(height: 24),
-          const Text(
-            "Giỏ hàng đang trống!",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
-          ),
+          const Text("Giỏ hàng đang trống!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black54)),
           const SizedBox(height: 8),
-          const Text(
-            "Chọn bánh bạn thích và đưa nó vào đây nhé!",
-            style: TextStyle(color: secondaryTextColor, fontSize: 16),
-          ),
+          const Text("Chọn bánh bạn thích và đưa nó vào đây nhé!", style: TextStyle(color: secondaryTextColor, fontSize: 16)),
         ],
       ),
     );
@@ -377,30 +257,12 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
         onDismissed: (_) => _deleteItem(item, skipConfirmation: true),
         background: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.red.shade300,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Icon(Icons.delete_sweep_outlined, color: Colors.white, size: 30),
-            ],
-          ),
+          decoration: BoxDecoration(color: Colors.red.shade300, borderRadius: BorderRadius.circular(20)),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.end, children: [Icon(Icons.delete_sweep_outlined, color: Colors.white, size: 30)]),
         ),
         child: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.08),
-                spreadRadius: 2,
-                blurRadius: 10,
-              ),
-            ],
-          ),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), spreadRadius: 2, blurRadius: 10)]),
           child: Row(
             children: [
               ClipRRect(
@@ -410,15 +272,7 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
                   width: 90,
                   height: 90,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 90,
-                    height: 90,
-                    color: Colors.grey.shade200,
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: secondaryTextColor,
-                    ),
-                  ),
+                  errorBuilder: (context, error, stackTrace) => Container(width: 90, height: 90, color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported, color: secondaryTextColor)),
                 ),
               ),
               const SizedBox(width: 16),
@@ -429,23 +283,8 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Text(
-                        item['name'] ?? 'Sản phẩm',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${(item['price'] as num?)?.toDouble().toStringAsFixed(0) ?? '0'} VNĐ',
-                        style: const TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
+                      Text(item['name'] ?? 'Sản phẩm', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text('${(item['price'] as num?)?.toDouble().toStringAsFixed(0) ?? '0'} VNĐ', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
                     ],
                   ),
                 ),
@@ -462,41 +301,22 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
     int quantity = (item['quantity'] as num?)?.toInt() ?? 1;
     return Column(
       children: [
-        _buildQuantityButton(
-          icon: Icons.add,
-          onPressed: () => _updateQuantity(item, quantity + 1),
-        ),
+        _buildQuantityButton(icon: Icons.add, onPressed: () => _updateQuantity(item, quantity + 1)),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Text(
-            '$quantity',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          child: Text('$quantity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
-        _buildQuantityButton(
-          icon: Icons.remove,
-          onPressed: () => _updateQuantity(item, quantity - 1),
-        ),
+        _buildQuantityButton(icon: Icons.remove, onPressed: () => _updateQuantity(item, quantity - 1)),
       ],
     );
   }
 
-  Widget _buildQuantityButton({
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
+  Widget _buildQuantityButton({ required IconData icon, required VoidCallback onPressed }) {
     return Container(
       width: 30,
       height: 30,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 16),
-        onPressed: onPressed,
-      ),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+      child: IconButton(padding: EdgeInsets.zero, icon: Icon(icon, size: 16), onPressed: onPressed),
     );
   }
 }

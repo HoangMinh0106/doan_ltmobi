@@ -5,7 +5,7 @@ import 'package:doan_ltmobi/page/profile_screen.dart';
 import 'package:doan_ltmobi/page/product_screen.dart';
 import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // THÊM MỚI: Cần thiết để thoát ứng dụng
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
@@ -55,6 +55,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedIndex = index;
     });
   }
+  
+  void _navigateToHome() {
+    setState(() {
+      _selectedIndex = 0;
+    });
+  }
 
   void _updateAllCarts() {
     _cartKey.currentState?.fetchCartItems();
@@ -80,14 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
         content: const Text('Bạn có chắc chắn muốn thoát ứng dụng không?'),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false), // Trả về false -> không thoát
-            child: const Text('Hủy',style: TextStyle(color: ProductScreenState.primaryColor),),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Hủy',style: TextStyle(color: Color(0xFFE57373))),
           ),
           TextButton(
             onPressed: () {
               SystemNavigator.pop();
             },
-            child: const Text('Thoát',style: TextStyle(color: ProductScreenState.primaryColor),),
+            child: const Text('Thoát',style: TextStyle(color: Color(0xFFE57373))),
           ),
         ],
       ),
@@ -118,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         userDocument: _currentUserDocument,
         onCartUpdated: _updateProductScreenBadge,
         selectedAddress: _selectedAddress,
+        onCheckoutSuccess: _navigateToHome,
       ),
       ProfileScreen(
         userDocument: _currentUserDocument,
@@ -125,7 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
-    // CẬP NHẬT: Bọc Scaffold bằng WillPopScope
     return WillPopScope(
       onWillPop: _showExitConfirmationDialog,
       child: Scaffold(
