@@ -4,20 +4,22 @@ import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:math';
+import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class ProductScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
   final VoidCallback onProductAdded;
   final VoidCallback onCartIconTapped;
-  final String selectedAddress; // THÊM MỚI: Nhận địa chỉ
+  final String selectedAddress;
 
   const ProductScreen({
     Key? key,
     required this.userDocument,
     required this.onProductAdded,
     required this.onCartIconTapped,
-    required this.selectedAddress, // THÊM MỚI
+    required this.selectedAddress,
   }) : super(key: key);
 
   @override
@@ -25,13 +27,15 @@ class ProductScreen extends StatefulWidget {
 }
 
 class ProductScreenState extends State<ProductScreen> {
-  // ... (phần code còn lại của ProductScreenState giữ nguyên) ...
   final TextEditingController _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _filteredProducts = [];
   List<Map<String, dynamic>> _categories = [];
   String? _selectedCategoryId;
+  
+  RangeValues? _selectedPriceRange;
+  double _maxPrice = 1000000;
 
   bool _isLoading = true;
   String _errorMessage = '';
@@ -41,6 +45,8 @@ class ProductScreenState extends State<ProductScreen> {
   static const Color scaffoldBackgroundColor = Color(0xFFF9F9F9);
   static const Color textColor = Color(0xFF333333);
   static final Color secondaryTextColor = Colors.grey.shade600;
+
+  final NumberFormat currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
   @override
   void initState() {
@@ -83,13 +89,19 @@ class ProductScreenState extends State<ProductScreen> {
 
       final products = results[0];
       final categories = results[1];
-
+      
       if (mounted) {
         setState(() {
           _allProducts = products;
           _filteredProducts = products;
           _categories = categories;
           _isLoading = false;
+
+          if (_allProducts.isNotEmpty) {
+            _maxPrice = _allProducts
+                .map((p) => (p['price'] as num).toDouble())
+                .reduce(max);
+          }
         });
       }
     } catch (e) {
@@ -104,15 +116,39 @@ class ProductScreenState extends State<ProductScreen> {
 
   void _applyFilters() {
     final query = _searchController.text.toLowerCase();
+
     setState(() {
       _filteredProducts = _allProducts.where((product) {
+        final productName = (product['name'] as String? ?? '').toLowerCase();
+        final productPrice = (product['price'] as num).toDouble();
+
+        final bool searchMatch = productName.contains(query);
         final bool categoryMatch = _selectedCategoryId == null ||
             product['categoryId'] == _selectedCategoryId;
-        final productName = (product['name'] as String? ?? '').toLowerCase();
-        final bool searchMatch = productName.contains(query);
-        return categoryMatch && searchMatch;
+        final bool priceMatch = _selectedPriceRange == null ||
+            (productPrice >= _selectedPriceRange!.start &&
+             productPrice <= _selectedPriceRange!.end);
+
+        return searchMatch && categoryMatch && priceMatch;
       }).toList();
     });
+  }
+  
+  Future<void> _showPriceFilterDialog() async {
+    RangeValues? newRange = await showDialog<RangeValues>(
+      context: context,
+      builder: (context) {
+        return PriceRangeDialog(
+          maxPrice: _maxPrice,
+          initialRange: _selectedPriceRange,
+        );
+      },
+    );
+
+    setState(() {
+        _selectedPriceRange = newRange;
+    });
+    _applyFilters();
   }
 
   void _handleAddToCart(Map<String, dynamic> product) async {
@@ -144,11 +180,7 @@ class ProductScreenState extends State<ProductScreen> {
     return Scaffold(
       backgroundColor: scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          "Sản phẩm",
-          style: TextStyle(
-              color: textColor, fontWeight: FontWeight.bold, fontSize: 22),
-        ),
+        title: const Text("Sản phẩm", style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 22)),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -157,10 +189,44 @@ class ProductScreenState extends State<ProductScreen> {
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
+          _buildSearchAndFilterBar(),
           _buildCategoryFilters(),
           Expanded(
             child: _buildBodyContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Tìm kiếm sản phẩm...',
+                hintStyle: TextStyle(color: secondaryTextColor),
+                prefixIcon: Icon(Icons.search, color: secondaryTextColor, size: 22),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20.0),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: const BorderSide(color: primaryColor, width: 1.5)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: Icon(
+              Icons.filter_list,
+              color: _selectedPriceRange != null ? primaryColor : secondaryTextColor,
+            ),
+            onPressed: _showPriceFilterDialog,
+            tooltip: 'Lọc theo giá',
           ),
         ],
       ),
@@ -261,33 +327,7 @@ class ProductScreenState extends State<ProductScreen> {
       ),
     );
   }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-            hintText: 'Tìm kiếm sản phẩm...',
-            hintStyle: TextStyle(color: secondaryTextColor),
-            prefixIcon:
-                Icon(Icons.search, color: secondaryTextColor, size: 22),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20.0),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: const BorderSide(color: primaryColor, width: 1.5),
-            )),
-      ),
-    );
-  }
-
+  
   Widget _buildBodyContent() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: primaryColor));
@@ -304,7 +344,7 @@ class ProductScreenState extends State<ProductScreen> {
     if (_filteredProducts.isEmpty) {
       return Center(
           child: Text(
-              _searchController.text.isNotEmpty || _selectedCategoryId != null
+              _searchController.text.isNotEmpty || _selectedCategoryId != null || _selectedPriceRange != null
                   ? "Không tìm thấy sản phẩm."
                   : "Chưa có sản phẩm nào.",
               style: TextStyle(color: secondaryTextColor, fontSize: 16)));
@@ -324,7 +364,8 @@ class ProductScreenState extends State<ProductScreen> {
       },
     );
   }
-
+  
+  // HÀM HOÀN CHỈNH: Đã được thêm vào đầy đủ
   Widget _buildProductGridCard(Map<String, dynamic> product) {
     final String name = product['name'] ?? 'Chưa có tên';
     final String imageUrl = product['imageUrl'] ?? '';
@@ -339,7 +380,6 @@ class ProductScreenState extends State<ProductScreen> {
               product: product,
               userDocument: widget.userDocument,
               onProductAdded: widget.onProductAdded,
-              // THÊM MỚI: Truyền địa chỉ vào ProductDetailScreen
               selectedAddress: widget.selectedAddress,
             ),
           ),
@@ -363,6 +403,7 @@ class ProductScreenState extends State<ProductScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
+                flex: 3,
                 child: Hero(
                   tag: product['_id'],
                   child: Container(
@@ -371,71 +412,145 @@ class ProductScreenState extends State<ProductScreen> {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                                Icons.image_not_supported,
-                                color: secondaryTextColor,
-                                size: 40),
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(Icons.image_not_supported, color: secondaryTextColor, size: 40),
                           )
-                        : Icon(Icons.image_not_supported,
-                            color: secondaryTextColor, size: 40),
+                        : Icon(Icons.image_not_supported, color: secondaryTextColor, size: 40),
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            '${price.toStringAsFixed(0)} đ',
-                            style: const TextStyle(
-                              color: primaryColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              currencyFormatter.format(price),
+                              style: const TextStyle(
+                                color: primaryColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        Container(
-                          height: 32,
-                          width: 32,
-                          decoration: BoxDecoration(
-                            color: primaryColor,
-                            borderRadius: BorderRadius.circular(10),
+                          Container(
+                            height: 32,
+                            width: 32,
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: IconButton(
+                              onPressed: () => _handleAddToCart(product),
+                              icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                              padding: EdgeInsets.zero,
+                              splashRadius: 20,
+                            ),
                           ),
-                          child: IconButton(
-                            onPressed: () => _handleAddToCart(product),
-                            icon: const Icon(Icons.add,
-                                size: 18, color: Colors.white),
-                            padding: EdgeInsets.zero,
-                            splashRadius: 20,
-                          ),
-                        ),
-                      ],
-                    )
-                  ],
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class PriceRangeDialog extends StatefulWidget {
+  final double maxPrice;
+  final RangeValues? initialRange;
+
+  const PriceRangeDialog({
+    Key? key,
+    required this.maxPrice,
+    this.initialRange,
+  }) : super(key: key);
+
+  @override
+  _PriceRangeDialogState createState() => _PriceRangeDialogState();
+}
+
+class _PriceRangeDialogState extends State<PriceRangeDialog> {
+  late RangeValues _currentRange;
+  final NumberFormat currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
+  @override
+  void initState() {
+    super.initState();
+    _currentRange = widget.initialRange ?? RangeValues(0, widget.maxPrice);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Lọc theo giá'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Từ ${currencyFormatter.format(_currentRange.start)} - ${currencyFormatter.format(_currentRange.end)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          RangeSlider(
+            values: _currentRange,
+            min: 0,
+            max: widget.maxPrice,
+            divisions: 20,
+            labels: RangeLabels(
+              currencyFormatter.format(_currentRange.start),
+              currencyFormatter.format(_currentRange.end),
+            ),
+            onChanged: (values) {
+              setState(() {
+                _currentRange = values;
+              });
+            },
+            activeColor: ProductScreenState.primaryColor,
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(null);
+          },
+          child: const Text('Xóa bộ lọc', style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop(_currentRange);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: ProductScreenState.primaryColor,
+          ),
+          child: const Text('Áp dụng', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }
