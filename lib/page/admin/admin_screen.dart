@@ -1,10 +1,8 @@
-// lib/page/admin/admin_screen.dart
 
 import 'package:doan_ltmobi/page/admin/user_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/category_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/product_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/promotion_management_screen.dart';
-// THÊM MỚI: Import màn hình quản lý đơn hàng
 import 'package:doan_ltmobi/page/admin/order_management_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +17,6 @@ class AdminScreen extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
-    // ... (Hàm này giữ nguyên, không thay đổi)
     return Card(
       elevation: 4.0,
       shape: RoundedRectangleBorder(
@@ -98,10 +95,9 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-            // THÊM MỚI: Thẻ chức năng quản lý đơn hàng
             _buildDashboardCard(
               context: context,
-              icon: Icons.receipt_long_outlined, // Icon cho đơn hàng
+              icon: Icons.receipt_long_outlined,
               title: 'Quản lý Đơn hàng',
               color: Colors.red,
               onTap: () {
