@@ -120,6 +120,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> widgetOptions = <Widget>[
       HomePageBody(
         userName: userName,
+        userDocument: _currentUserDocument,
+        onProductAdded: _updateAllCarts,
         profileImageBase64: _currentUserDocument["profile_image_base64"],
         onSearchSubmitted: _onSearchSubmitted,
         onCategorySelected: _onCategorySelected,
@@ -131,7 +133,6 @@ class _HomeScreenState extends State<HomeScreen> {
         userDocument: _currentUserDocument,
         onProductAdded: _updateAllCarts,
         onCartIconTapped: () => _onItemTapped(2),
-        // THÊM MỚI: Truyền địa chỉ đã chọn vào ProductScreen
         selectedAddress: _selectedAddress,
       ),
       CartScreen(

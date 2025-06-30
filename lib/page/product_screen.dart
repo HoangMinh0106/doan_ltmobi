@@ -135,7 +135,7 @@ class ProductScreenState extends State<ProductScreen> {
   }
   
   Future<void> _showPriceFilterDialog() async {
-    RangeValues? newRange = await showDialog<RangeValues>(
+    final newRange = await showDialog<RangeValues>(
       context: context,
       builder: (context) {
         return PriceRangeDialog(
@@ -365,7 +365,6 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
   
-  // HÀM HOÀN CHỈNH: Đã được thêm vào đầy đủ
   Widget _buildProductGridCard(Map<String, dynamic> product) {
     final String name = product['name'] ?? 'Chưa có tên';
     final String imageUrl = product['imageUrl'] ?? '';
