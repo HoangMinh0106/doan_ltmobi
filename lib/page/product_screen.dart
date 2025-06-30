@@ -29,23 +29,28 @@ class ProductScreen extends StatefulWidget {
 class ProductScreenState extends State<ProductScreen> {
   final TextEditingController _searchController = TextEditingController();
 
+  // State lists
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _filteredProducts = [];
   List<Map<String, dynamic>> _categories = [];
+
+  // State for filters
   String? _selectedCategoryId;
-  
   RangeValues? _selectedPriceRange;
   double _maxPrice = 1000000;
 
+  // UI State
   bool _isLoading = true;
   String _errorMessage = '';
   int _cartTotalQuantity = 0;
 
+  // Constants
   static const Color primaryColor = Color(0xFFF07167);
   static const Color scaffoldBackgroundColor = Color(0xFFF9F9F9);
   static const Color textColor = Color(0xFF333333);
   static final Color secondaryTextColor = Colors.grey.shade600;
 
+  // Formatter
   final NumberFormat currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
   @override
@@ -63,6 +68,7 @@ class ProductScreenState extends State<ProductScreen> {
     super.dispose();
   }
 
+  /// Public method to be called from other screens (e.g., HomeScreen)
   void filterByCategory(String? categoryId) {
     setState(() {
       _selectedCategoryId = categoryId;
@@ -70,6 +76,7 @@ class ProductScreenState extends State<ProductScreen> {
     });
   }
 
+  /// Fetches cart quantity and updates the badge
   Future<void> updateCartBadge() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final count = await MongoDatabase.getCartTotalQuantity(userId);
@@ -80,6 +87,7 @@ class ProductScreenState extends State<ProductScreen> {
     }
   }
 
+  /// Fetches both products and categories from the database
   Future<void> _fetchData() async {
     try {
       final results = await Future.wait<List<Map<String, dynamic>>>([
@@ -114,6 +122,7 @@ class ProductScreenState extends State<ProductScreen> {
     }
   }
 
+  /// Applies all active filters (search, category, price) to the product list
   void _applyFilters() {
     final query = _searchController.text.toLowerCase();
 
@@ -121,10 +130,22 @@ class ProductScreenState extends State<ProductScreen> {
       _filteredProducts = _allProducts.where((product) {
         final productName = (product['name'] as String? ?? '').toLowerCase();
         final productPrice = (product['price'] as num).toDouble();
+        final productCategoryId = product['categoryId']; // Can be ObjectId or String
 
+        // Search Filter
         final bool searchMatch = productName.contains(query);
-        final bool categoryMatch = _selectedCategoryId == null ||
-            product['categoryId'] == _selectedCategoryId;
+
+        // Category Filter
+        final bool categoryMatch;
+        if (_selectedCategoryId == null) {
+          categoryMatch = true; // "All" is selected
+        } else if (productCategoryId is mongo.ObjectId) {
+          categoryMatch = productCategoryId.toHexString() == _selectedCategoryId;
+        } else {
+          categoryMatch = productCategoryId.toString() == _selectedCategoryId;
+        }
+
+        // Price Filter
         final bool priceMatch = _selectedPriceRange == null ||
             (productPrice >= _selectedPriceRange!.start &&
              productPrice <= _selectedPriceRange!.end);
@@ -134,6 +155,7 @@ class ProductScreenState extends State<ProductScreen> {
     });
   }
   
+  /// Shows the price range filter dialog
   Future<void> _showPriceFilterDialog() async {
     final newRange = await showDialog<RangeValues>(
       context: context,
@@ -151,6 +173,7 @@ class ProductScreenState extends State<ProductScreen> {
     _applyFilters();
   }
 
+  /// Handles adding a product to the cart
   void _handleAddToCart(Map<String, dynamic> product) async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productName = product['name'] ?? 'Sản phẩm';
@@ -171,6 +194,7 @@ class ProductScreenState extends State<ProductScreen> {
     }
   }
 
+  /// Allows other screens to trigger a search
   void performSearch(String query) {
     _searchController.text = query;
   }
@@ -199,6 +223,7 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
 
+  /// Builds the top bar with search field and filter button
   Widget _buildSearchAndFilterBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 4.0),
@@ -233,17 +258,20 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
 
+  /// Builds the horizontal list of category filter chips
   Widget _buildCategoryFilters() {
-    if (_isLoading || _categories.isEmpty) return const SizedBox.shrink();
+    if (_isLoading) return const SizedBox(height: 50); // Placeholder
+    if (_categories.isEmpty) return const SizedBox.shrink();
 
     return Container(
       height: 50,
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _categories.length + 1,
+        itemCount: _categories.length + 1, // +1 for "All"
         itemBuilder: (context, index) {
           if (index == 0) {
+            // "All" button
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: ChoiceChip(
@@ -265,7 +293,7 @@ class ProductScreenState extends State<ProductScreen> {
           }
 
           final category = _categories[index - 1];
-          final categoryId = category['_id']?.toHexString() ?? '';
+          final categoryId = category['_id']?.toHexString() ?? category['_id'].toString();
           final isSelected = _selectedCategoryId == categoryId;
 
           return Padding(
@@ -291,6 +319,7 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
 
+  /// Builds the cart icon with a badge
   Widget _buildCartIcon() {
     return Padding(
       padding: const EdgeInsets.only(right: 12.0),
@@ -328,6 +357,7 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
   
+  /// Builds the main content area (loading, error, empty, or product grid)
   Widget _buildBodyContent() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: primaryColor));
@@ -365,6 +395,7 @@ class ProductScreenState extends State<ProductScreen> {
     );
   }
   
+  /// Builds a single product card for the grid view
   Widget _buildProductGridCard(Map<String, dynamic> product) {
     final String name = product['name'] ?? 'Chưa có tên';
     final String imageUrl = product['imageUrl'] ?? '';
@@ -479,6 +510,7 @@ class ProductScreenState extends State<ProductScreen> {
   }
 }
 
+/// A stateful dialog for selecting a price range.
 class PriceRangeDialog extends StatefulWidget {
   final double maxPrice;
   final RangeValues? initialRange;
@@ -536,12 +568,14 @@ class _PriceRangeDialogState extends State<PriceRangeDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () {
+            // Return null to signify clearing the filter
             Navigator.of(context).pop(null);
           },
           child: const Text('Xóa bộ lọc', style: TextStyle(color: Colors.grey)),
         ),
         ElevatedButton(
           onPressed: () {
+            // Return the selected range
             Navigator.of(context).pop(_currentRange);
           },
           style: ElevatedButton.styleFrom(
