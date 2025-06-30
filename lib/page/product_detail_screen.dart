@@ -9,14 +9,14 @@ class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
   final Map<String, dynamic> userDocument;
   final VoidCallback onProductAdded;
-  final String selectedAddress; // THÊM MỚI: Nhận địa chỉ
+  final String selectedAddress;
 
   const ProductDetailScreen({
     Key? key,
     required this.product,
     required this.userDocument,
     required this.onProductAdded,
-    required this.selectedAddress, // THÊM MỚI
+    required this.selectedAddress,
   }) : super(key: key);
 
   @override
@@ -67,7 +67,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  // SỬA LỖI: Hàm xử lý "Mua ngay"
   void _handleBuyNow() {
     final productPrice = (widget.product['price'] as num).toDouble();
     final totalPrice = productPrice * _quantity;
@@ -89,18 +88,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           userDocument: widget.userDocument,
           cartItems: buyNowItems,
           totalPrice: totalPrice,
-          // SỬA LỖI 1: Đổi `onCheckoutSuccess` thành `onOrderPlaced`
           onOrderPlaced: () {
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
-          // SỬA LỖI 2: Thêm `shippingAddress`
           shippingAddress: widget.selectedAddress,
         ),
       ),
     );
   }
 
-  // ... (phần code còn lại của ProductDetailScreen giữ nguyên) ...
   @override
   Widget build(BuildContext context) {
     final String name = widget.product['name'] ?? 'Chưa có tên';
@@ -123,7 +119,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   _buildProductHeader(name, rating, reviewCount),
                   const SizedBox(height: 24),
-                  _buildQuantitySelector(price), // Cập nhật để truyền giá
+                  _buildQuantitySelector(price),
                   const SizedBox(height: 24),
                   _buildDivider(),
                   const SizedBox(height: 16),
