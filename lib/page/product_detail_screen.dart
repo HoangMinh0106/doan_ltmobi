@@ -3,6 +3,7 @@
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/checkout_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Thêm import này
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class ProductDetailScreen extends StatefulWidget {
@@ -25,6 +26,8 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _quantity = 1;
+  final NumberFormat currencyFormatter =
+      NumberFormat('#,##0', 'vi_VN'); // Thêm định dạng tiền tệ
 
   static const Color primaryColor = Color(0xFFF07167);
   static const Color secondaryColor = Color(0xFFFED9D9);
@@ -49,9 +52,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _handleAddToCart() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     final productName = widget.product['name'] ?? 'Sản phẩm';
-    
+
     await MongoDatabase.addToCart(userId, widget.product, quantity: _quantity);
-    
+
     widget.onProductAdded();
 
     if (mounted) {
@@ -60,7 +63,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           content: Text("Đã thêm $productName (x$_quantity) vào giỏ hàng!"),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         ),
       );
@@ -102,9 +106,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final String name = widget.product['name'] ?? 'Chưa có tên';
     final String imageUrl = widget.product['imageUrl'] ?? '';
     final double price = (widget.product['price'] as num?)?.toDouble() ?? 0.0;
-    final String description = widget.product['description'] ?? 'Chưa có mô tả cho sản phẩm này.';
+    final String description =
+        widget.product['description'] ?? 'Chưa có mô tả cho sản phẩm này.';
     final double rating = (widget.product['rating'] as num?)?.toDouble() ?? 4.5;
-    final int reviewCount = (widget.product['reviewCount'] as num?)?.toInt() ?? 0;
+    final int reviewCount =
+        (widget.product['reviewCount'] as num?)?.toInt() ?? 0;
 
     return Scaffold(
       backgroundColor: scaffoldBackgroundColor,
@@ -133,7 +139,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       bottomNavigationBar: _buildBottomActionButtons(),
     );
   }
-  
+
   Widget _buildBottomActionButtons() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -162,7 +168,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 foregroundColor: primaryColor,
                 side: const BorderSide(color: primaryColor),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -172,14 +179,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               icon: const Icon(Icons.flash_on, color: Colors.white),
               label: const Text(
                 "Mua ngay",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
               onPressed: _handleBuyNow,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: primaryColor,
                 elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -187,7 +196,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
-  
+
   Widget _buildSliverAppBar(String imageUrl, String name) {
     return SliverAppBar(
       expandedHeight: 300,
@@ -280,7 +289,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
         ),
         Text(
-          '${(price * _quantity).toStringAsFixed(0)} đ',
+          '${currencyFormatter.format(price * _quantity)} đ', // Sửa ở đây
           style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -291,7 +300,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  Widget _buildQuantityButton({required IconData icon, required VoidCallback onPressed}) {
+  Widget _buildQuantityButton(
+      {required IconData icon, required VoidCallback onPressed}) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
