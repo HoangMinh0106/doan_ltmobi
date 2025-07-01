@@ -1,8 +1,7 @@
-// lib/page/admin/product_management_screen.dart
-
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:elegant_notification/elegant_notification.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Thêm import này
 import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class ProductManagementScreen extends StatefulWidget {
@@ -14,6 +13,9 @@ class ProductManagementScreen extends StatefulWidget {
 }
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
+  // Thêm định dạng tiền tệ
+  final NumberFormat currencyFormatter = NumberFormat('#,##0', 'vi_VN');
+
   // Hàm xử lý cho cả việc Thêm và Sửa sản phẩm
   Future<void> _addOrEditProduct({Map<String, dynamic>? product}) async {
     final bool isEditMode = product != null;
@@ -25,8 +27,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
         TextEditingController(text: isEditMode ? product['description'] : '');
     final imageUrlController =
         TextEditingController(text: isEditMode ? product['imageUrl'] : '');
-    final categoryIdController =
-        TextEditingController(text: isEditMode ? product['categoryId'] : '');
+    // Sửa lỗi: Đảm bảo categoryId luôn là chuỗi
+    final categoryIdController = TextEditingController(
+        text: isEditMode ? product['categoryId']?.toString() : '');
 
     final bool? saved = await showDialog<bool>(
       context: context,
@@ -104,31 +107,36 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
         'categoryId': categoryIdController.text.trim(),
       };
 
-      if (isEditMode) {
-        // Cập nhật sản phẩm đã có
-        await MongoDatabase.productCollection.updateOne(
-          M.where.id(product['_id']),
-          M.modify
-            ..set('name', productData['name'])
-            ..set('price', productData['price'])
-            ..set('description', productData['description'])
-            ..set('imageUrl', productData['imageUrl'])
-            ..set('categoryId', productData['categoryId']),
-        );
-      } else {
-        // Thêm sản phẩm mới
-        await MongoDatabase.productCollection
-            .insertOne({'_id': M.ObjectId(), ...productData});
-      }
+      try {
+        if (isEditMode) {
+          // SỬA LỖI: Sử dụng phương thức cập nhật chuẩn với $set
+          final updateDoc = {'\$set': productData};
+          await MongoDatabase.productCollection.updateOne(
+            M.where.id(product['_id']),
+            updateDoc,
+          );
+        } else {
+          // Thêm sản phẩm mới
+          await MongoDatabase.productCollection
+              .insertOne({'_id': M.ObjectId(), ...productData});
+        }
 
-      if (mounted) {
-        ElegantNotification.success(
-                title: const Text('Thành công'),
-                description: Text(isEditMode
-                    ? 'Đã cập nhật sản phẩm.'
-                    : 'Đã thêm sản phẩm mới.'))
-            .show(context);
-        setState(() {}); // Tải lại danh sách
+        if (mounted) {
+          ElegantNotification.success(
+                  title: const Text('Thành công'),
+                  description: Text(isEditMode
+                      ? 'Đã cập nhật sản phẩm.'
+                      : 'Đã thêm sản phẩm mới.'))
+              .show(context);
+          setState(() {}); // Tải lại danh sách
+        }
+      } catch (e) {
+        if (mounted) {
+          ElegantNotification.error(
+                  title: const Text('Lỗi'),
+                  description: Text('Thao tác thất bại: $e'))
+              .show(context);
+        }
       }
     }
   }
@@ -220,7 +228,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                           child: const Icon(Icons.image_not_supported)),
                   title: Text(product['name'] ?? 'Chưa có tên',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${price.toStringAsFixed(0)} VNĐ'),
+                  // Sửa đổi: Áp dụng định dạng tiền tệ
+                  subtitle: Text('${currencyFormatter.format(price)} VNĐ'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
