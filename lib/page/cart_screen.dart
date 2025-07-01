@@ -3,6 +3,7 @@
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/checkout_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Thêm thư viện intl để định dạng
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class CartScreen extends StatefulWidget {
@@ -28,6 +29,9 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
   bool _isLoading = true;
   double _totalPrice = 0.0;
   late AnimationController _listAnimationController;
+
+  // Thêm định dạng tiền tệ
+  final NumberFormat currencyFormatter = NumberFormat('#,##0', 'vi_VN');
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
@@ -161,7 +165,8 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Tạm tính', style: TextStyle(color: secondaryTextColor, fontSize: 16)),
-              Text('${_totalPrice.toStringAsFixed(0)} VNĐ', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              // Sửa đổi: Áp dụng định dạng tiền tệ
+              Text('${currencyFormatter.format(_totalPrice)} VNĐ', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ],
           ),
           const SizedBox(height: 8),
@@ -177,7 +182,8 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Tổng cộng', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('${_totalPrice.toStringAsFixed(0)} VNĐ', style: const TextStyle(color: primaryColor, fontSize: 22, fontWeight: FontWeight.bold)),
+              // Sửa đổi: Áp dụng định dạng tiền tệ
+              Text('${currencyFormatter.format(_totalPrice)} VNĐ', style: const TextStyle(color: primaryColor, fontSize: 22, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 20),
@@ -284,7 +290,8 @@ class CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       Text(item['name'] ?? 'Sản phẩm', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
-                      Text('${(item['price'] as num?)?.toDouble().toStringAsFixed(0) ?? '0'} VNĐ', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                      // Sửa đổi: Áp dụng định dạng tiền tệ
+                      Text('${currencyFormatter.format((item['price'] as num?)?.toDouble() ?? 0.0)} VNĐ', style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
                     ],
                   ),
                 ),
