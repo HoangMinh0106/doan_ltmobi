@@ -3,8 +3,7 @@
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/success_dialog.dart';
 import 'package:flutter/material.dart';
-//import 'package:qr_flutter/qr_flutter.dart';
-//import 'vnpay_service.dart';
+import 'package:intl/intl.dart'; // Thêm import này
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:flutter_paypal_payment/flutter_paypal_payment.dart';
 
@@ -31,6 +30,8 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isProcessing = false;
   String _paymentMethod = 'cod';
+  final NumberFormat currencyFormatter =
+      NumberFormat('#,##0', 'vi_VN'); // Thêm định dạng tiền tệ
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
@@ -52,15 +53,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         await showDialog(
           context: context,
           barrierDismissible: false,
-          builder:
-              (dialogContext) => SuccessDialog(
-                title: 'Đặt hàng thành công!',
-                message:
-                    'Cảm ơn bạn đã tin tưởng. Đơn hàng của bạn đang được xử lý.',
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
+          builder: (dialogContext) => SuccessDialog(
+            title: 'Đặt hàng thành công!',
+            message:
+                'Cảm ơn bạn đã tin tưởng. Đơn hàng của bạn đang được xử lý.',
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+          ),
         );
         if (mounted) Navigator.of(context).pop();
         widget.onOrderPlaced();
@@ -92,44 +92,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder:
-            (BuildContext context) => PaypalCheckoutView(
-              sandboxMode: true,
-              clientId:
-                  "ASWpZzeLcjyWKtcQImVarVnuJsKa8aOcHhuwM6Gm0a_LXkucil9mlptWeMlAnMtc37QhhymrFLIPMHjT",
-              secretKey:
-                  "EEI0qjoEnL8uo_R3wnf657itcIzRHxsJwPKSoTMl-boXE6IHoPoT5fMiGZRImr8DVaXosk3UbdAyMEYO",
-              //email personal : sb-43l47vv38933884@personal.example.com
-              //pass: ({<e2P-H
-              transactions: [
-                {
-                  "amount": {
-                    "total": totalAmountUSD,
-                    "currency": "USD",
-                    "details": {
-                      "subtotal": totalAmountUSD,
-                      "shipping": '0',
-                      "shipping_discount": 0,
-                    },
-                  },
-                  "description": "Thanh toán cho đơn hàng.",
+        builder: (BuildContext context) => PaypalCheckoutView(
+          sandboxMode: true,
+          clientId:
+              "ASWpZzeLcjyWKtcQImVarVnuJsKa8aOcHhuwM6Gm0a_LXkucil9mlptWeMlAnMtc37QhhymrFLIPMHjT",
+          secretKey:
+              "EEI0qjoEnL8uo_R3wnf657itcIzRHxsJwPKSoTMl-boXE6IHoPoT5fMiGZRImr8DVaXosk3UbdAyMEYO",
+          transactions: [
+            {
+              "amount": {
+                "total": totalAmountUSD,
+                "currency": "USD",
+                "details": {
+                  "subtotal": totalAmountUSD,
+                  "shipping": '0',
+                  "shipping_discount": 0,
                 },
-              ],
-              note: "Vui lòng hoàn tất thanh toán.",
-              onSuccess: (Map params) async {
-                Navigator.pop(context);
-                await _processOrderCreation();
               },
-              onError: (error) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Lỗi thanh toán PayPal.")),
-                );
-              },
-              onCancel: () {
-                Navigator.pop(context);
-              },
-            ),
+              "description": "Thanh toán cho đơn hàng.",
+            },
+          ],
+          note: "Vui lòng hoàn tất thanh toán.",
+          onSuccess: (Map params) async {
+            Navigator.pop(context);
+            await _processOrderCreation();
+          },
+          onError: (error) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Lỗi thanh toán PayPal.")),
+            );
+          },
+          onCancel: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
     );
   }
@@ -164,16 +161,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               color: isSelected ? primaryColor : Colors.grey.shade300,
               width: isSelected ? 2.0 : 1.0,
             ),
-            boxShadow:
-                isSelected
-                    ? [
-                      BoxShadow(
-                        color: primaryColor.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                    : [],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
           ),
           child: Row(
             children: [
@@ -221,7 +217,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 20),
             _buildSectionTitle('Phương thức thanh toán'),
-
             _buildPaymentOption(
               title: 'Thanh toán khi nhận hàng',
               value: 'cod',
@@ -245,15 +240,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 height: 28,
               ),
             ),
-
             const SizedBox(height: 20),
             _buildSectionTitle('Tóm tắt đơn hàng'),
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.cartItems.length,
-              itemBuilder:
-                  (context, index) => _buildOrderItem(widget.cartItems[index]),
+              itemBuilder: (context, index) =>
+                  _buildOrderItem(widget.cartItems[index]),
               separatorBuilder: (context, index) => const Divider(height: 24),
             ),
           ],
@@ -305,12 +299,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             width: 70,
             height: 70,
             fit: BoxFit.cover,
-            errorBuilder:
-                (context, error, stackTrace) => Container(
-                  width: 70,
-                  height: 70,
-                  color: Colors.grey.shade200,
-                ),
+            errorBuilder: (context, error, stackTrace) => Container(
+              width: 70,
+              height: 70,
+              color: Colors.grey.shade200,
+            ),
           ),
         ),
         const SizedBox(width: 16),
@@ -337,7 +330,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
         const SizedBox(width: 16),
         Text(
-          '${(item['price'] as num?)?.toDouble().toStringAsFixed(0) ?? '0'} VNĐ',
+          '${currencyFormatter.format((item['price'] as num?)?.toDouble() ?? 0.0)} VNĐ', // Sửa ở đây
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ],
@@ -376,7 +369,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
               Text(
-                '${widget.totalPrice.toStringAsFixed(0)} VNĐ',
+                '${currencyFormatter.format(widget.totalPrice)} VNĐ', // Sửa ở đây
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -398,26 +391,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 elevation: 2,
               ),
-              child:
-                  _isProcessing
-                      ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 3,
-                        ),
-                      )
-                      : Text(
-                        _paymentMethod == 'cod'
-                            ? 'Đặt hàng'
-                            : 'Thanh toán với ${_paymentMethod.toUpperCase()}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+              child: _isProcessing
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 3,
                       ),
+                    )
+                  : Text(
+                      _paymentMethod == 'cod'
+                          ? 'Đặt hàng'
+                          : 'Thanh toán với ${_paymentMethod.toUpperCase()}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
