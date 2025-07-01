@@ -22,7 +22,7 @@ class MongoDatabase {
     categoryCollection = db.collection("categories");
     productCollection = db.collection("products");
     cartCollection = db.collection("carts");
-    orderCollection = db.collection("orders"); 
+    orderCollection = db.collection("orders");
   }
 
   static Future<void> insertUser(String email, String password) async {
@@ -133,14 +133,27 @@ class MongoDatabase {
     }
   }
 
-  // --- THÊM MỚI HÀM NÀY ---
-  /// Xóa một đơn hàng dựa trên ID của nó.
   static Future<void> deleteOrder(ObjectId orderId) async {
     try {
       await orderCollection.remove(where.id(orderId));
     } catch (e) {
       print("Lỗi khi xóa đơn hàng: $e");
       rethrow;
+    }
+  }
+
+  // --- HÀM MỚI ---
+  /// Lấy danh sách các đơn hàng của một người dùng cụ thể.
+  static Future<List<Map<String, dynamic>>> getOrdersByUserId(ObjectId userId) async {
+    try {
+      // Sắp xếp theo ngày đặt hàng, mới nhất lên đầu
+      final orders = await orderCollection.find(
+        where.eq('userId', userId).sortBy('orderDate', descending: true)
+      ).toList();
+      return orders;
+    } catch(e) {
+      print("Lỗi khi lấy danh sách đơn hàng của người dùng: $e");
+      return [];
     }
   }
 }
