@@ -1,7 +1,7 @@
 // lib/page/checkout_screen.dart
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/success_dialog.dart';
-import 'package:doan_ltmobi/page/vn_location_search.dart'; // <--- Đảm bảo import đúng
+import 'package:doan_ltmobi/page/vn_location_search.dart';          
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
@@ -12,16 +12,16 @@ class CheckoutScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
   final double totalPrice;
   final VoidCallback onOrderPlaced;
-  final String shippingAddress;
+  final String shippingAddress;   
 
   const CheckoutScreen({
-    Key? key,
+    super.key,
     required this.userDocument,
     required this.cartItems,
     required this.totalPrice,
     required this.onOrderPlaced,
     required this.shippingAddress,
-  }) : super(key: key);
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -32,15 +32,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // STATE
   bool _isProcessing = false;
   String _paymentMethod = 'cod';
-  late String _selectedAddress;
-
-  final TextEditingController _voucherController = TextEditingController();
-  Map<String, dynamic>? _appliedVoucher;
-  double _discountAmount = 0.0;
-  String _voucherMessage = '';
+  late String _selectedAddress;   // địa chỉ động
 
   final NumberFormat _currency =
-      NumberFormat('#,##0', 'vi_VN');
+      NumberFormat('#,##0', 'vi_VN'); // 10 000 → 10.000
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
@@ -53,13 +48,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────
-  // SỬA LỖI TẠI ĐÂY
+  // CHỌN ĐỊA CHỈ TỪ VnLocationSearch
   Future<void> _selectAddress() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const VnLocationSearch()), // SỬA TÊN CLASS TẠI ĐÂY
+      MaterialPageRoute(builder: (_) => const VnLocationSearch()),
     );
 
+    // Kết quả có thể là String hoặc Map tuỳ bạn cấu hình trong VnLocationSearch
     if (result != null && mounted) {
       setState(() {
         _selectedAddress = result is String
@@ -68,54 +64,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
     }
   }
+
   // ──────────────────────────────────────────────────────────────
-
-  Future<void> _applyVoucher() async {
-    final code = _voucherController.text.trim().toUpperCase();
-    if (code.isEmpty) return;
-
-    final voucher = await MongoDatabase.voucherCollection.findOne(
-      mongo.where.eq('code', code).eq('isActive', true),
-    );
-
-    if (voucher == null) {
-      setState(() {
-        _voucherMessage = 'Mã giảm giá không hợp lệ hoặc đã hết hạn.';
-        _appliedVoucher = null;
-        _discountAmount = 0;
-      });
-      return;
-    }
-
-    final minPurchase = (voucher['minPurchase'] as num?)?.toDouble() ?? 0.0;
-    if (widget.totalPrice < minPurchase) {
-      setState(() {
-        _voucherMessage = 'Đơn hàng chưa đạt giá trị tối thiểu (${_currency.format(minPurchase)} VNĐ).';
-        _appliedVoucher = null;
-        _discountAmount = 0;
-      });
-      return;
-    }
-
-    double discount = 0;
-    final discountType = voucher['discountType'];
-    final discountValue = (voucher['discountValue'] as num).toDouble();
-
-    if (discountType == 'percent') {
-      discount = (widget.totalPrice * discountValue) / 100;
-    } else { // fixed
-      discount = discountValue;
-    }
-
-    setState(() {
-      _appliedVoucher = voucher;
-      _discountAmount = discount;
-      _voucherMessage = 'Áp dụng thành công!';
-    });
-  }
-
+  // XỬ LÝ ĐẶT HÀNG / THANH TOÁN
   Future<void> _processOrderCreation() async {
-     if (_selectedAddress.isEmpty) {
+    if (_selectedAddress.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng chọn địa chỉ giao hàng!')),
       );
@@ -125,12 +78,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     setState(() => _isProcessing = true);
     try {
       final userId = widget.userDocument['_id'] as mongo.ObjectId;
-      final finalPrice = widget.totalPrice - _discountAmount;
-
       await MongoDatabase.createOrder(
         userId,
         widget.cartItems,
-        finalPrice,
+        widget.totalPrice,
         _selectedAddress,
       );
       await MongoDatabase.clearCart(userId);
@@ -145,7 +96,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       );
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop(); // đóng Checkout
       widget.onOrderPlaced();
     } catch (e) {
       if (mounted) {
@@ -172,7 +123,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     const double rate = 25000;
-    final usd = ((widget.totalPrice - _discountAmount) / rate).toStringAsFixed(2);
+    final usd = (widget.totalPrice / rate).toStringAsFixed(2);
 
     Navigator.push(
       context,
@@ -212,6 +163,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void _handleConfirmOrder() =>
       _paymentMethod == 'paypal' ? _payWithPayPal() : _processOrderCreation();
 
+  // ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: const Color(0xFFF8F8F8),
@@ -235,9 +187,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     : _selectedAddress,
                 onTap: _selectAddress,
               ),
-              const SizedBox(height: 20),
-              _buildSection('Mã giảm giá'),
-              _buildVoucherInput(),
               const SizedBox(height: 20),
               _buildSection('Phương thức thanh toán'),
               _buildPaymentOption(
@@ -271,6 +220,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         bottomNavigationBar: _buildCheckoutBar(),
       );
 
+  // ──────────────────────────────────────────────────────────────
   Widget _buildSection(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Text(title,
@@ -297,57 +247,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           onTap: onTap,
         ),
       );
-
-  Widget _buildVoucherInput() {
-    return Card(
-      elevation: 0.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 16.0, right: 8.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.local_offer_outlined, color: primaryColor),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    controller: _voucherController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nhập mã giảm giá',
-                      border: InputBorder.none,
-                    ),
-                    onChanged: (text) {
-                      if (_voucherMessage.isNotEmpty) {
-                        setState(() => _voucherMessage = '');
-                      }
-                    },
-                  ),
-                ),
-                TextButton(
-                  onPressed: _applyVoucher,
-                  child: const Text('Áp dụng', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-            if (_voucherMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0, left: 48),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _voucherMessage,
-                    style: TextStyle(
-                      color: _appliedVoucher != null ? Colors.green : Colors.red,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildPaymentOption({
     required String title,
@@ -454,39 +353,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Tạm tính:',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: secondaryTextColor)),
-                Text('${_currency.format(widget.totalPrice)} VNĐ',
-                    style: const TextStyle(fontSize: 16)),
-              ],
-            ),
-            if (_appliedVoucher != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Giảm giá (${_appliedVoucher!['code']}):',
-                        style:
-                            const TextStyle(fontSize: 16, color: Colors.green)),
-                    Text('-${_currency.format(_discountAmount)} VNĐ',
-                        style:
-                            const TextStyle(fontSize: 16, color: Colors.green)),
-                  ],
-                ),
-              ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
                 const Text('Tổng cộng:',
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: secondaryTextColor)),
-                Text('${_currency.format(widget.totalPrice - _discountAmount)} VNĐ',
+                Text('${_currency.format(widget.totalPrice)} VNĐ',
                     style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,

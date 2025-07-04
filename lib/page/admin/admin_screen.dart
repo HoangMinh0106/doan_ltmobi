@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'voucher_management_screen.dart'; // <-- THÊM MỚI
 
 class AdminScreen extends StatelessWidget {
-  const AdminScreen({Key? key}) : super(key: key);
+  const AdminScreen({super.key});
 
   Widget _buildDashboardCard({
     required BuildContext context,

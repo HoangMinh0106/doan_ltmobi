@@ -15,10 +15,9 @@ class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
   final Function(Map<String, dynamic>) onProfileUpdated;
   const ProfileScreen(
-      {Key? key,
+      {super.key,
       required this.userDocument,
-      required this.onProfileUpdated})
-      : super(key: key);
+      required this.onProfileUpdated});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();

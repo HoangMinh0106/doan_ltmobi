@@ -444,7 +444,13 @@ class ProductScreenState extends State<ProductScreen> {
 class PriceRangeDialog extends StatefulWidget {
   final double maxPrice;
   final RangeValues? initialRange;
-  const PriceRangeDialog({super.key, required this.maxPrice, this.initialRange});
+
+  const PriceRangeDialog({
+    Key? key,
+    required this.maxPrice,
+    this.initialRange,
+  }) : super(key: key);
+
   @override
   PriceRangeDialogState createState() => PriceRangeDialogState();
 }

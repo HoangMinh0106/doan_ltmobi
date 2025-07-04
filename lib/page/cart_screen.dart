@@ -13,12 +13,12 @@ class CartScreen extends StatefulWidget {
   final VoidCallback onCheckoutSuccess;
 
   const CartScreen({
-    Key? key,
+    super.key,
     required this.userDocument,
     required this.onCartUpdated,
     required this.selectedAddress,
     required this.onCheckoutSuccess,
-  }) : super(key: key);
+  });
 
   @override
   CartScreenState createState() => CartScreenState();

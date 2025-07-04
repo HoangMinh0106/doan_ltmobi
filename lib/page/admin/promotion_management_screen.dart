@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class PromotionManagementScreen extends StatefulWidget {
-  const PromotionManagementScreen({Key? key}) : super(key: key);
+  const PromotionManagementScreen({super.key});
 
   @override
   State<PromotionManagementScreen> createState() =>
@@ -148,8 +148,8 @@ class _PromotionManagementScreenState extends State<PromotionManagementScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditPromotion(),
         backgroundColor: Colors.teal,
-        child: const Icon(Icons.add),
         tooltip: 'Thêm Ưu đãi mới',
+        child: const Icon(Icons.add),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         // Sử dụng bannerCollection

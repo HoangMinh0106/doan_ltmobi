@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class CategoryManagementScreen extends StatefulWidget {
-  const CategoryManagementScreen({Key? key}) : super(key: key);
+  const CategoryManagementScreen({super.key});
 
   @override
   State<CategoryManagementScreen> createState() =>
@@ -119,8 +119,8 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditCategory(), // Gọi hàm để thêm mới
         backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.add),
         tooltip: 'Thêm Danh mục mới',
+        child: const Icon(Icons.add),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: MongoDatabase.categoryCollection.find().toList(),

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class PromotionDetailScreen extends StatelessWidget {
   final Map<String, dynamic> promotion;
 
-  const PromotionDetailScreen({Key? key, required this.promotion}) : super(key: key);
+  const PromotionDetailScreen({super.key, required this.promotion});
 
   static const Color primaryColor = Color(0xFFE57373);
 

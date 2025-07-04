@@ -5,7 +5,7 @@ import 'package:intl/intl.dart'; // Thêm import này
 import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class ProductManagementScreen extends StatefulWidget {
-  const ProductManagementScreen({Key? key}) : super(key: key);
+  const ProductManagementScreen({super.key});
 
   @override
   State<ProductManagementScreen> createState() =>
@@ -183,8 +183,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditProduct(),
         backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.add),
         tooltip: 'Thêm Sản phẩm mới',
+        child: const Icon(Icons.add),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: MongoDatabase.productCollection.find().toList(),

@@ -13,12 +13,12 @@ class ProductDetailScreen extends StatefulWidget {
   final String selectedAddress;
 
   const ProductDetailScreen({
-    Key? key,
+    super.key,
     required this.product,
     required this.userDocument,
     required this.onProductAdded,
     required this.selectedAddress,
-  }) : super(key: key);
+  });
 
   @override
   _ProductDetailScreenState createState() => _ProductDetailScreenState();

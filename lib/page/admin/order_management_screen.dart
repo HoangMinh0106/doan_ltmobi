@@ -8,7 +8,7 @@ import 'package:mongo_dart/mongo_dart.dart' as M;
 import 'order_detail_screen.dart';
 
 class OrderManagementScreen extends StatefulWidget {
-  const OrderManagementScreen({Key? key}) : super(key: key);
+  const OrderManagementScreen({super.key});
 
   @override
   State<OrderManagementScreen> createState() => _OrderManagementScreenState();
