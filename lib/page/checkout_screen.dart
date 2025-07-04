@@ -1,7 +1,7 @@
 // lib/page/checkout_screen.dart
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/success_dialog.dart';
-import 'package:doan_ltmobi/page/vn_location_search.dart';          // << thêm
+import 'package:doan_ltmobi/page/vn_location_search.dart';          
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
@@ -12,7 +12,7 @@ class CheckoutScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
   final double totalPrice;
   final VoidCallback onOrderPlaced;
-  final String shippingAddress;   // có thể rỗng
+  final String shippingAddress;   
 
   const CheckoutScreen({
     Key? key,
