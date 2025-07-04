@@ -9,7 +9,7 @@ import 'package:mongo_dart/mongo_dart.dart' as M;
 class OrderDetailScreen extends StatefulWidget {
   final Map<String, dynamic> order;
 
-  const OrderDetailScreen({Key? key, required this.order}) : super(key: key);
+  const OrderDetailScreen({super.key, required this.order});
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();

@@ -11,9 +11,9 @@ class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.userDocument,
-  }) : super(key: key);
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

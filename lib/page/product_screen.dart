@@ -15,12 +15,12 @@ class ProductScreen extends StatefulWidget {
   final String selectedAddress;
 
   const ProductScreen({
-    Key? key,
+    super.key,
     required this.userDocument,
     required this.onProductAdded,
     required this.onCartIconTapped,
     required this.selectedAddress,
-  }) : super(key: key);
+  });
 
   @override
   ProductScreenState createState() => ProductScreenState();
@@ -518,10 +518,10 @@ class PriceRangeDialog extends StatefulWidget {
   final RangeValues? initialRange;
 
   const PriceRangeDialog({
-    Key? key,
+    super.key,
     required this.maxPrice,
     this.initialRange,
-  }) : super(key: key);
+  });
 
   @override
   _PriceRangeDialogState createState() => _PriceRangeDialogState();

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class VnLocationSearch extends StatefulWidget {
-  const VnLocationSearch({Key? key}) : super(key: key);
+  const VnLocationSearch({super.key});
 
   @override
   State<VnLocationSearch> createState() => _VnLocationSearchState();

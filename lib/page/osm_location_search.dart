@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 /// Màn hình tìm kiếm địa điểm bằng OpenStreetMap (miễn phí)
 class OsmLocationSearch extends StatefulWidget {
-  const OsmLocationSearch({Key? key}) : super(key: key);
+  const OsmLocationSearch({super.key});
 
   @override
   State<OsmLocationSearch> createState() => _OsmLocationSearchState();

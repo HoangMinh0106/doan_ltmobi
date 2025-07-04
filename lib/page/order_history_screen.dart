@@ -7,7 +7,7 @@ import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class OrderHistoryScreen extends StatefulWidget {
   final M.ObjectId userId;
-  const OrderHistoryScreen({Key? key, required this.userId}) : super(key: key);
+  const OrderHistoryScreen({super.key, required this.userId});
 
   @override
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();

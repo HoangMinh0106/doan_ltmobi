@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 class CustomerOrderDetailScreen extends StatelessWidget {
   final Map<String, dynamic> order;
 
-  const CustomerOrderDetailScreen({Key? key, required this.order}) : super(key: key);
+  const CustomerOrderDetailScreen({super.key, required this.order});
 
   // Map để dịch trạng thái từ tiếng Anh sang tiếng Việt
   final Map<String, String> statusMap = const {

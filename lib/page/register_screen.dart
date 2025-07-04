@@ -6,7 +6,7 @@ import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
 
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
@@ -174,9 +174,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final imageBytes = await _profileImage!.readAsBytes();
       base64Image = base64Encode(imageBytes);
     }
-    var _id = M.ObjectId();
+    var id = M.ObjectId();
     final data = {
-      "_id": _id,
+      "_id": id,
       "email": email,
       "password": password,
       "phone": phone,

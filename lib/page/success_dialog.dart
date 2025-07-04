@@ -6,11 +6,11 @@ class SuccessDialog extends StatefulWidget {
   final VoidCallback onPressed;
 
   const SuccessDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   State<SuccessDialog> createState() => _SuccessDialogState();

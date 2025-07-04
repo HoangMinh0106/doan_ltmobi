@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class UserManagementScreen extends StatefulWidget {
-  const UserManagementScreen({Key? key}) : super(key: key);
+  const UserManagementScreen({super.key});
 
   @override
   State<UserManagementScreen> createState() => _UserManagementScreenState();
@@ -132,8 +132,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditUser(), // Gọi hàm ở chế độ "thêm mới"
         backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.add),
         tooltip: 'Thêm người dùng mới',
+        child: const Icon(Icons.add),
       ),
       // *** KẾT THÚC THAY ĐỔI ***
       body: FutureBuilder<List<Map<String, dynamic>>>(

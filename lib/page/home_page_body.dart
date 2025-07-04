@@ -25,7 +25,7 @@ class HomePageBody extends StatefulWidget {
   final Function(String) onAddressChanged;
 
   const HomePageBody({
-    Key? key,
+    super.key,
     required this.userDocument,
     required this.onProductAdded,
     required this.userName,
@@ -34,7 +34,7 @@ class HomePageBody extends StatefulWidget {
     required this.onCategorySelected,
     required this.initialAddress,
     required this.onAddressChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<HomePageBody> createState() => _HomePageBodyState();

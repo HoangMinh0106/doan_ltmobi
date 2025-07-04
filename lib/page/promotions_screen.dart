@@ -5,7 +5,7 @@ import 'package:doan_ltmobi/page/promotion_detail_screen.dart';
 import 'package:flutter/material.dart';
 
 class PromotionsScreen extends StatefulWidget {
-  const PromotionsScreen({Key? key}) : super(key: key);
+  const PromotionsScreen({super.key});
 
   @override
   State<PromotionsScreen> createState() => _PromotionsScreenState();
