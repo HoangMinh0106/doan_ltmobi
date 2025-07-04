@@ -3,7 +3,7 @@
 import 'package:doan_ltmobi/page/home_page_body.dart';
 import 'package:doan_ltmobi/page/profile_screen.dart';
 import 'package:doan_ltmobi/page/product_screen.dart';
-import 'package:doan_ltmobi/page/cart_screen.dart';
+import 'package:doan_ltmobi/page/cart_screen.dart'; // Đã sửa lỗi import ở đây
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,9 +11,9 @@ class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.userDocument,
-  }) : super(key: key);
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   late Map<String, dynamic> _currentUserDocument;
+
   final GlobalKey<CartScreenState> _cartKey = GlobalKey<CartScreenState>();
   final GlobalKey<ProductScreenState> _productScreenKey =
       GlobalKey<ProductScreenState>();
@@ -51,14 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
       _cartKey.currentState?.fetchCartItems();
     }
     if (_selectedIndex == 1 && index != 1) {
-       _productScreenKey.currentState?.filterByCategory(null);
+      _productScreenKey.currentState?.filterByCategory(null);
     }
     _updateProductScreenBadge();
     setState(() {
       _selectedIndex = index;
     });
   }
-  
+
   void _navigateToHome() {
     setState(() {
       _selectedIndex = 0;
@@ -80,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _productScreenKey.currentState?.performSearch(query);
     });
   }
-  
+
   void _onCategorySelected(String? categoryId) {
     setState(() {
       _selectedIndex = 1;
@@ -90,8 +91,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<bool> _showExitConfirmationDialog() async {
-    return await showDialog(
+  Future<void> _handleExit() async {
+    final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận thoát'),
@@ -99,17 +100,19 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Hủy',style: TextStyle(color: Color(0xFFE57373))),
+            child: const Text('Hủy', style: TextStyle(color: Color(0xFFE57373))),
           ),
           TextButton(
-            onPressed: () {
-              SystemNavigator.pop();
-            },
-            child: const Text('Thoát',style: TextStyle(color: Color(0xFFE57373))),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Thoát', style: TextStyle(color: Color(0xFFE57373))),
           ),
         ],
       ),
-    ) ?? false; 
+    );
+
+    if (shouldPop ?? false) {
+      SystemNavigator.pop();
+    }
   }
 
   @override
@@ -117,44 +120,46 @@ class _HomeScreenState extends State<HomeScreen> {
     final String email = _currentUserDocument["email"] ?? "User";
     final String userName = email.split('@').first;
 
-    final List<Widget> widgetOptions = <Widget>[
-      HomePageBody(
-        userName: userName,
-        userDocument: _currentUserDocument,
-        onProductAdded: _updateAllCarts,
-        profileImageBase64: _currentUserDocument["profile_image_base64"],
-        onSearchSubmitted: _onSearchSubmitted,
-        onCategorySelected: _onCategorySelected,
-        initialAddress: _selectedAddress,
-        onAddressChanged: _updateAddress,
-      ),
-      ProductScreen(
-        key: _productScreenKey,
-        userDocument: _currentUserDocument,
-        onProductAdded: _updateAllCarts,
-        onCartIconTapped: () => _onItemTapped(2),
-        selectedAddress: _selectedAddress,
-      ),
-      CartScreen(
-        key: _cartKey,
-        userDocument: _currentUserDocument,
-        onCartUpdated: _updateProductScreenBadge,
-        selectedAddress: _selectedAddress,
-        onCheckoutSuccess: _navigateToHome,
-      ),
-      ProfileScreen(
-        userDocument: _currentUserDocument,
-        onProfileUpdated: _updateUserDocument,
-      ),
-    ];
-
-    return WillPopScope(
-      onWillPop: _showExitConfirmationDialog,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (didPop) return;
+        _handleExit();
+      },
       child: Scaffold(
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _selectedIndex,
-          children: widgetOptions,
+          children: <Widget>[
+            HomePageBody(
+              userName: userName,
+              userDocument: _currentUserDocument,
+              onProductAdded: _updateAllCarts,
+              profileImageBase64: _currentUserDocument["profile_image_base64"],
+              onSearchSubmitted: _onSearchSubmitted,
+              onCategorySelected: _onCategorySelected,
+              initialAddress: _selectedAddress,
+              onAddressChanged: _updateAddress,
+            ),
+            ProductScreen(
+              key: _productScreenKey,
+              userDocument: _currentUserDocument,
+              onProductAdded: _updateAllCarts,
+              onCartIconTapped: () => _onItemTapped(2),
+              selectedAddress: _selectedAddress,
+            ),
+            CartScreen(
+              key: _cartKey,
+              userDocument: _currentUserDocument,
+              onCartUpdated: _updateProductScreenBadge,
+              selectedAddress: _selectedAddress,
+              onCheckoutSuccess: _navigateToHome,
+            ),
+            ProfileScreen(
+              userDocument: _currentUserDocument,
+              onProfileUpdated: _updateUserDocument,
+            ),
+          ],
         ),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
@@ -163,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 topLeft: Radius.circular(24), topRight: Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withAlpha(50),
                   spreadRadius: 1,
                   blurRadius: 10)
             ],

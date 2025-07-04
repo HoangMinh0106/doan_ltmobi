@@ -25,7 +25,7 @@ class HomePageBody extends StatefulWidget {
   final Function(String) onAddressChanged;
 
   const HomePageBody({
-    Key? key,
+    super.key,
     required this.userDocument,
     required this.onProductAdded,
     required this.userName,
@@ -34,7 +34,7 @@ class HomePageBody extends StatefulWidget {
     required this.onCategorySelected,
     required this.initialAddress,
     required this.onAddressChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<HomePageBody> createState() => _HomePageBodyState();
@@ -51,7 +51,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   Timer? _timer;
   late String _currentCity;
 
-  static const Color primaryColor = Color(0xFFF07167);
+  static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
   final NumberFormat currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
@@ -106,39 +106,76 @@ class _HomePageBodyState extends State<HomePageBody> {
       MaterialPageRoute(builder: (_) => const VnLocationSearch()),
     );
     if (result != null && mounted) {
-      setState(() => _currentCity = result as String);
-      widget.onAddressChanged(_currentCity);
+      final address = result is String ? result : (result['full_address'] ?? '').toString();
+      setState(() => _currentCity = address);
+      widget.onAddressChanged(address);
     }
+  }
+
+  void _handleAddToCart(Map<String, dynamic> product) {
+    final userId = widget.userDocument['_id'] as mongo.ObjectId;
+    MongoDatabase.addToCart(userId, product);
+    widget.onProductAdded();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Đã thêm '${product['name']}' vào giỏ hàng!"),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
-          _buildHeader(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildHeader(),
+          ),
           const SizedBox(height: 16),
-          Text("Xin chào,", style: TextStyle(fontSize: 22, color: Colors.grey.shade600)),
-          Text("${widget.userName}!", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Xin chào,", style: TextStyle(fontSize: 22, color: Colors.grey.shade600)),
+                Text("${widget.userName}!", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
-          _buildSearchBar(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildSearchBar(),
+          ),
           const SizedBox(height: 24),
-          _buildSectionHeader("Ưu đãi đặc biệt", () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const PromotionsScreen()));
-          }),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildSectionHeader("Ưu đãi đặc biệt", () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const PromotionsScreen()));
+            }),
+          ),
           const SizedBox(height: 12),
           _buildPromoSlider(),
           const SizedBox(height: 24),
-          _buildSectionHeader("Bán chạy nhất", () {
-            widget.onCategorySelected(null);
-          }),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildSectionHeader("Bán chạy nhất", () {
+              widget.onCategorySelected(null);
+            }),
+          ),
           const SizedBox(height: 12),
           _buildBestSellersSection(),
           const SizedBox(height: 24),
-          _buildSectionHeader("Danh mục", () {
-            widget.onCategorySelected(null);
-          }),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildSectionHeader("Danh mục", () {
+              widget.onCategorySelected(null);
+            }),
+          ),
           const SizedBox(height: 12),
           _buildCategorySection(),
         ],
@@ -151,19 +188,19 @@ class _HomePageBodyState extends State<HomePageBody> {
       children: [
         _buildProfileAvatar(),
         const SizedBox(width: 12),
-        Flexible(
+        Expanded(
           child: InkWell(
             onTap: _chooseLocation,
             borderRadius: BorderRadius.circular(20),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.location_on, color: primaryColor, size: 20),
                   const SizedBox(width: 6),
-                  Flexible(child: Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1)),
+                  Expanded(child: Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1)),
                   const SizedBox(width: 4), 
                   const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: primaryColor),
                 ],
@@ -180,14 +217,20 @@ class _HomePageBodyState extends State<HomePageBody> {
       controller: _searchController,
       onSubmitted: widget.onSearchSubmitted,
       decoration: InputDecoration(
-        hintText: 'Tìm kiếm sản phẩm, dịch vụ...',
-        prefixIcon: const Icon(Icons.search, color: secondaryTextColor),
+        hintText: 'Tìm kiếm sản phẩm...',
+        hintStyle: TextStyle(color: Colors.grey.shade500),
+        prefixIcon: Icon(Icons.search, color: Colors.grey.shade500, size: 22),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.grey.shade100,
         contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: const BorderSide(color: primaryColor, width: 1.5)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide(color: Colors.grey.shade300)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30.0), 
+          borderSide: BorderSide(color: Colors.grey.shade200)
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30.0), 
+          borderSide: const BorderSide(color: primaryColor, width: 1.5)
+        ),
       ),
     );
   }
@@ -205,21 +248,25 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
+  // *** BẮT ĐẦU SỬA LỖI ***
   Widget _buildPromoSlider() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bannersFuture,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 204, child: Center(child: CircularProgressIndicator(color: primaryColor)));
+          // Tăng chiều cao cho placeholder
+          return const SizedBox(height: 210, child: Center(child: CircularProgressIndicator(color: primaryColor)));
         }
         if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
-          return const SizedBox(height: 204, child: Center(child: Text("Không thể tải ưu đãi.")));
+          // Tăng chiều cao cho thông báo lỗi
+          return const SizedBox(height: 210, child: Center(child: Text("Không thể tải ưu đãi.")));
         }
         final banners = snap.data!;
         return Column(
           children: [
+            // Tăng chiều cao của khung PageView
             SizedBox(
-              height: 204,
+              height: 210,
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: banners.length,
@@ -229,10 +276,10 @@ class _HomePageBodyState extends State<HomePageBody> {
                   return InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PromotionDetailScreen(promotion: banner))),
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(banner['imageUrl'] ?? '', fit: BoxFit.cover),
+                        child: Image.network(banner['imageUrl'] ?? '', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.error)),
                       ),
                     ),
                   );
@@ -250,23 +297,25 @@ class _HomePageBodyState extends State<HomePageBody> {
       },
     );
   }
+  // *** KẾT THÚC SỬA LỖI ***
 
   Widget _buildBestSellersSection() {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _bestSellersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 220, child: Center(child: CircularProgressIndicator(color: primaryColor)));
+          return const SizedBox(height: 255, child: Center(child: CircularProgressIndicator(color: primaryColor)));
         }
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
           return const SizedBox.shrink();
         }
         final products = snapshot.data!;
         return SizedBox(
-          height: 230,
+          height: 255,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemBuilder: (context, index) {
               return _buildProductCard(products[index]);
             },
@@ -296,18 +345,25 @@ class _HomePageBodyState extends State<HomePageBody> {
         );
       },
       child: Container(
-        width: 150,
+        width: 160,
         margin: const EdgeInsets.only(right: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200, width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha(25),
+              blurRadius: 5,
+              offset: const Offset(0, 5),
+            )
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: AspectRatio(
                 aspectRatio: 1.1,
                 child: Image.network(
@@ -317,25 +373,48 @@ class _HomePageBodyState extends State<HomePageBody> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    currencyFormatter.format(price),
-                    style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(
+                      height: 36,
+                      child: Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, height: 1.25),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          currencyFormatter.format(price),
+                          style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        InkWell(
+                          onTap: () => _handleAddToCart(product),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(
+                              color: primaryColor,
+                              shape: BoxShape.circle
+                            ),
+                            child: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 18,),
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -355,6 +434,7 @@ class _HomePageBodyState extends State<HomePageBody> {
           final cats = snap.data!;
           return ListView.builder(
             scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: cats.length,
             itemBuilder: (_, i) => _buildCategoryItem(cats[i]),
           );
@@ -365,7 +445,7 @@ class _HomePageBodyState extends State<HomePageBody> {
 
   Widget _buildCategoryItem(Map<String, dynamic> category) => GestureDetector(
         onTap: () {
-          final categoryId = category['_id']?.toHexString();
+          final categoryId = category['_id']?.oid;
           widget.onCategorySelected(categoryId);
         },
         child: Container(
@@ -381,7 +461,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                 decoration: const BoxDecoration(
                     color: Color(0xFFFFF0F0), shape: BoxShape.circle),
                 child: (category['imageUrl'] != null && category['imageUrl'].isNotEmpty)
-                    ? Image.network(category['imageUrl'], fit: BoxFit.contain)
+                    ? Image.network(category['imageUrl'], fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.error))
                     : const Icon(Icons.category, size: 35, color: primaryColor),
               ),
               const SizedBox(height: 8),
