@@ -12,6 +12,7 @@ class MongoDatabase {
   static var productCollection;
   static var cartCollection;
   static var orderCollection;
+  static var voucherCollection; // <-- Giữ lại dòng đã thêm
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -23,6 +24,7 @@ class MongoDatabase {
     productCollection = db.collection("products");
     cartCollection = db.collection("carts");
     orderCollection = db.collection("orders");
+    voucherCollection = db.collection("vouchers"); // <-- Giữ lại dòng đã thêm
   }
 
   static Future<void> insertUser(String email, String password) async {
@@ -107,6 +109,7 @@ class MongoDatabase {
     }
   }
 
+  // SỬA LẠI HÀM NÀY VỀ TRẠNG THÁI GỐC CỦA BẠN
   static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
     try {
       final orderDocument = {
@@ -116,7 +119,7 @@ class MongoDatabase {
         'shippingAddress': shippingAddress,
         'totalPrice': totalPrice,
         'orderDate': DateTime.now(),
-        'status': 'Pending',
+        'status': 'Pending', // Sử dụng 'Pending' thay vì 'Đang xử lý'
       };
       await orderCollection.insertOne(orderDocument);
     } catch (e) {
@@ -142,11 +145,8 @@ class MongoDatabase {
     }
   }
 
-  // --- HÀM MỚI ---
-  /// Lấy danh sách các đơn hàng của một người dùng cụ thể.
   static Future<List<Map<String, dynamic>>> getOrdersByUserId(ObjectId userId) async {
     try {
-      // Sắp xếp theo ngày đặt hàng, mới nhất lên đầu
       final orders = await orderCollection.find(
         where.eq('userId', userId).sortBy('orderDate', descending: true)
       ).toList();
