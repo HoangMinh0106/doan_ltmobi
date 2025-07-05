@@ -1,7 +1,7 @@
 // lib/page/checkout_screen.dart
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/success_dialog.dart';
-import 'package:doan_ltmobi/page/vn_location_search.dart';
+import 'package:doan_ltmobi/page/vn_location_search.dart'; // <--- Đảm bảo import đúng
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
@@ -15,47 +15,51 @@ class CheckoutScreen extends StatefulWidget {
   final String shippingAddress;
 
   const CheckoutScreen({
-    super.key,
+    Key? key,
     required this.userDocument,
     required this.cartItems,
     required this.totalPrice,
     required this.onOrderPlaced,
     required this.shippingAddress,
-  });
+  }) : super(key: key);
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  // --- STATE ---
+  // ──────────────────────────────────────────────────────────────
+  // STATE
   bool _isProcessing = false;
   String _paymentMethod = 'cod';
   late String _selectedAddress;
 
-  // --- STATE CHO VOUCHER (ĐÃ KHÔI PHỤC) ---
   final TextEditingController _voucherController = TextEditingController();
   Map<String, dynamic>? _appliedVoucher;
   double _discountAmount = 0.0;
   String _voucherMessage = '';
 
-  final NumberFormat _currency = NumberFormat('#,##0', 'vi_VN');
+  final NumberFormat _currency =
+      NumberFormat('#,##0', 'vi_VN');
+
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
-  
+  // ──────────────────────────────────────────────────────────────
+
   @override
   void initState() {
     super.initState();
     _selectedAddress = widget.shippingAddress.trim();
   }
 
-  // *** SỬA LỖI TẠI ĐÂY ***
+  // ──────────────────────────────────────────────────────────────
+  // SỬA LỖI TẠI ĐÂY
   Future<void> _selectAddress() async {
     final result = await Navigator.push(
       context,
-      // Sửa LocationSearchScreen thành VnLocationSearch
-      MaterialPageRoute(builder: (_) => const VnLocationSearch()), 
+      MaterialPageRoute(builder: (_) => const VnLocationSearch()), // SỬA TÊN CLASS TẠI ĐÂY
     );
+
     if (result != null && mounted) {
       setState(() {
         _selectedAddress = result is String
@@ -64,12 +68,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
     }
   }
+  // ──────────────────────────────────────────────────────────────
 
-  // --- HÀM ÁP DỤNG VOUCHER (ĐÃ KHÔI PHỤC) ---
   Future<void> _applyVoucher() async {
     final code = _voucherController.text.trim().toUpperCase();
     if (code.isEmpty) return;
-    FocusScope.of(context).unfocus();
 
     final voucher = await MongoDatabase.voucherCollection.findOne(
       mongo.where.eq('code', code).eq('isActive', true),
@@ -100,7 +103,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (discountType == 'percent') {
       discount = (widget.totalPrice * discountValue) / 100;
-    } else {
+    } else { // fixed
       discount = discountValue;
     }
 
@@ -111,10 +114,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
   }
 
-
-  // --- HÀM XỬ LÝ ĐẶT HÀNG (ĐÃ CẬP NHẬT) ---
   Future<void> _processOrderCreation() async {
-    if (_selectedAddress.isEmpty) {
+     if (_selectedAddress.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng chọn địa chỉ giao hàng!')),
       );
@@ -157,7 +158,55 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   void _payWithPayPal() {
-    // Logic thanh toán paypal
+    if (widget.totalPrice <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tổng tiền không hợp lệ.')),
+      );
+      return;
+    }
+    if (_selectedAddress.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn địa chỉ giao hàng!')),
+      );
+      return;
+    }
+
+    const double rate = 25000;
+    final usd = ((widget.totalPrice - _discountAmount) / rate).toStringAsFixed(2);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PaypalCheckoutView(
+          sandboxMode: true,
+          clientId:
+              'ASWpZzeLcjyWKtcQImVarVnuJsKa8aOcHhuwM6Gm0a_LXkucil9mlptWeMlAnMtc37QhhymrFLIPMHjT',
+          secretKey:
+              'EEI0qjoEnL8uo_R3wnf657itcIzRHxsJwPKSoTMl-boXE6IHoPoT5fMiGZRImr8DVaXosk3UbdAyMEYO',
+          transactions: [
+            {
+              'amount': {
+                'total': usd,
+                'currency': 'USD',
+                'details': {'subtotal': usd, 'shipping': '0', 'shipping_discount': 0},
+              },
+              'description': 'Thanh toán cho đơn hàng.',
+            },
+          ],
+          note: 'Vui lòng hoàn tất thanh toán.',
+          onSuccess: (_) async {
+            Navigator.pop(context);
+            await _processOrderCreation();
+          },
+          onError: (_) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Lỗi thanh toán PayPal.')));
+          },
+          onCancel: () => Navigator.pop(context),
+        ),
+      ),
+    );
   }
 
   void _handleConfirmOrder() =>
@@ -194,7 +243,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _buildPaymentOption(
                 title: 'Thanh toán khi nhận hàng',
                 value: 'cod',
-                icon: const Icon(Icons.local_shipping_outlined, color: Colors.brown, size: 28),
+                icon: const Icon(Icons.local_shipping_outlined,
+                    color: Colors.brown, size: 28),
               ),
               _buildPaymentOption(
                 title: 'Thanh toán qua VNPAY',
@@ -223,7 +273,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Widget _buildSection(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        child: Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       );
 
   Widget _buildInfoCard({
@@ -231,14 +282,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
-  }) => Card(
+  }) =>
+      Card(
         elevation: 0.5,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListTile(
           leading: Icon(icon, color: primaryColor),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text(subtitle, style: const TextStyle(color: secondaryTextColor)),
-          trailing: const Icon(Icons.chevron_right, color: secondaryTextColor),
+          title: Text(title,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          subtitle:
+              Text(subtitle, style: const TextStyle(color: secondaryTextColor)),
+          trailing:
+              const Icon(Icons.chevron_right, color: secondaryTextColor),
           onTap: onTap,
         ),
       );
@@ -250,7 +305,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Padding(
         padding: const EdgeInsets.only(left: 16.0, right: 8.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
@@ -259,7 +313,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Expanded(
                   child: TextField(
                     controller: _voucherController,
-                    textCapitalization: TextCapitalization.characters,
                     decoration: const InputDecoration(
                       hintText: 'Nhập mã giảm giá',
                       border: InputBorder.none,
@@ -279,11 +332,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             if (_voucherMessage.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(48, 0, 0, 8),
-                child: Text(
-                  _voucherMessage,
-                  style: TextStyle(
-                    color: _appliedVoucher != null ? Colors.green : Colors.red,
+                padding: const EdgeInsets.only(bottom: 8.0, left: 48),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _voucherMessage,
+                    style: TextStyle(
+                      color: _appliedVoucher != null ? Colors.green : Colors.red,
+                    ),
                   ),
                 ),
               ),
@@ -314,7 +370,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               width: selected ? 2 : 1,
             ),
             boxShadow: selected
-                ? [BoxShadow(color: primaryColor.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))]
+                ? [
+                    BoxShadow(
+                        color: primaryColor.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4))
+                  ]
                 : [],
           ),
           child: Row(
@@ -322,7 +383,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               icon,
               const SizedBox(width: 16),
               Expanded(
-                child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text(title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
               ),
               if (selected)
                 const Icon(Icons.check_circle, color: primaryColor, size: 24),
@@ -339,8 +402,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
               item['imageUrl'] ?? '',
-              width: 70, height: 70, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: Colors.grey.shade200),
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 70,
+                height: 70,
+                color: Colors.grey.shade200,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -348,76 +417,113 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['name'] ?? 'Sản phẩm', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(item['name'] ?? 'Sản phẩm',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 8),
-                Text('Số lượng: ${item['quantity']}', style: const TextStyle(color: secondaryTextColor, fontSize: 14)),
+                Text('Số lượng: ${item['quantity']}',
+                    style:
+                        const TextStyle(color: secondaryTextColor, fontSize: 14)),
               ],
             ),
           ),
           const SizedBox(width: 16),
-          Text('${_currency.format((item['price'] as num?)?.toDouble() ?? 0)} VNĐ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text('${_currency.format((item['price'] as num?)?.toDouble() ?? 0)} VNĐ',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       );
 
-  Widget _buildCheckoutBar() {
-    final finalPrice = widget.totalPrice - _discountAmount;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 3, blurRadius: 10)],
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Tạm tính:', style: TextStyle(fontSize: 16, color: secondaryTextColor)),
-              Text('${_currency.format(widget.totalPrice)} VNĐ', style: const TextStyle(fontSize: 16)),
-            ],
-          ),
-          if (_appliedVoucher != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Giảm giá (${_appliedVoucher!['code']}):', style: const TextStyle(fontSize: 16, color: Colors.green)),
-                  Text('-${_currency.format(_discountAmount)} VNĐ', style: const TextStyle(fontSize: 16, color: Colors.green)),
-                ],
+  Widget _buildCheckoutBar() => Container(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 3,
+                blurRadius: 10)
+          ],
+          borderRadius:
+              const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Tạm tính:',
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: secondaryTextColor)),
+                Text('${_currency.format(widget.totalPrice)} VNĐ',
+                    style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+            if (_appliedVoucher != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Giảm giá (${_appliedVoucher!['code']}):',
+                        style:
+                            const TextStyle(fontSize: 16, color: Colors.green)),
+                    Text('-${_currency.format(_discountAmount)} VNĐ',
+                        style:
+                            const TextStyle(fontSize: 16, color: Colors.green)),
+                  ],
+                ),
+              ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Tổng cộng:',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: secondaryTextColor)),
+                Text('${_currency.format(widget.totalPrice - _discountAmount)} VNĐ',
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isProcessing ? null : _handleConfirmOrder,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
+                  elevation: 2,
+                ),
+                child: _isProcessing
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 3),
+                      )
+                    : Text(
+                        _paymentMethod == 'cod'
+                            ? 'Đặt hàng'
+                            : 'Thanh toán với ${_paymentMethod.toUpperCase()}',
+                        style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold),
+                      ),
               ),
             ),
-          const Divider(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Tổng cộng:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: secondaryTextColor)),
-              Text('${_currency.format(finalPrice)} VNĐ', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isProcessing ? null : _handleConfirmOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 2,
-              ),
-              child: _isProcessing
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                  : Text(
-                      _paymentMethod == 'cod' ? 'Đặt hàng' : 'Thanh toán với ${_paymentMethod.toUpperCase()}',
-                      style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
 }
