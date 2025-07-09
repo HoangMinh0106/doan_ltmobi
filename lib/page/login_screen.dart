@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset('assets/logo-app.png', height: 70),
+                    Image.asset('assets/logo-app.png', height: 90),
                     const SizedBox(width: 10),
                   ],
                 ),
@@ -129,14 +129,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(35.0), // Đã bo tròn
                     ),
                     floatingLabelStyle: const TextStyle(color: Colors.black),
                     enabledBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(35.0)), // Thêm bo tròn cho trạng thái enabled
                       borderSide:
                           BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
                     ),
                     focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(35.0)), // Thêm bo tròn cho trạng thái focused
                       borderSide:
                           BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
                     ),
@@ -150,14 +152,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Mật khẩu',
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(35.0), // Chỉnh sửa ở đây
                     ),
                     floatingLabelStyle: const TextStyle(color: Colors.black),
                     enabledBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(35.0)), // Thêm bo tròn cho trạng thái enabled
                       borderSide:
                           BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
                     ),
                     focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(35.0)), // Thêm bo tròn cho trạng thái focused
                       borderSide:
                           BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
                     ),
@@ -197,13 +201,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _loginUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFDE0E0),
+                    backgroundColor: const Color(0xFFFFAF99),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(35.0), // Bo tròn nút bấm để đồng bộ
                     ),
                   ),
-                  child: _isLoading 
+                  child: _isLoading
                     ? const CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                       )
@@ -254,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         'Đăng ký',
                         style: TextStyle(
-                          color: Color(0xFFE57373),
+                          color: Color(0xFFFFAF99),
                           fontWeight: FontWeight.bold,
                         ),
                       ),

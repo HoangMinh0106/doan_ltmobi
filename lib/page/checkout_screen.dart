@@ -15,13 +15,13 @@ class CheckoutScreen extends StatefulWidget {
   final String shippingAddress;
 
   const CheckoutScreen({
-    Key? key,
+    super.key,
     required this.userDocument,
     required this.cartItems,
     required this.totalPrice,
     required this.onOrderPlaced,
     required this.shippingAddress,
-  }) : super(key: key);
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();

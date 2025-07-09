@@ -42,7 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset('assets/logo-app.png', height: 70),
+                    Image.asset('assets/logo-app.png', height: 80),
                     const SizedBox(width: 10),
                   ],
                 ),
@@ -97,10 +97,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ElevatedButton(
                   onPressed: _registerUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFDE0E0),
+                    backgroundColor: const Color(0xFFFFAF99),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
                     ),
                   ),
                   child: const Text(
@@ -122,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: const Text(
                         'Đăng nhập',
                         style: TextStyle(
-                          color: Color(0xFFE57373),
+                          color: Color(0xFFFFAF99),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -198,26 +198,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade600),
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                _profileImage == null
-                    ? 'Chọn ảnh đại diện (tùy chọn)'
-                    : _profileImage!.path.split('/').last,
-                style: TextStyle(
-                  color: _profileImage == null
-                      ? Colors.grey.shade700
-                      : Colors.black,
-                  fontSize: 16,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 12.0),
+                child: Text(
+                  _profileImage == null
+                      ? 'Chọn ảnh đại diện (tùy chọn)'
+                      : _profileImage!.path.split('/').last,
+                  style: TextStyle(
+                    color: _profileImage == null
+                        ? Colors.grey.shade700
+                        : Colors.black,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ),
-            Icon(Icons.photo_library_outlined, color: Colors.grey.shade700),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Icon(Icons.photo_library_outlined, color: Colors.grey.shade700),
+            ),
           ],
         ),
       ),
@@ -234,15 +240,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       decoration: InputDecoration(
         labelText: labelText,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
         ),
-        // Đổi màu cho floating label thành màu đen
         floatingLabelStyle: const TextStyle(color: Colors.black),
          enabledBorder: OutlineInputBorder(
-             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)), // Viền khi không focus
+             borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
+             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)),
               ),
             focusedBorder: OutlineInputBorder(
-               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2), // Viền khi focus
+               borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
+               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
               ),
       ),
     );
@@ -259,9 +266,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       decoration: InputDecoration(
         labelText: labelText,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
         ),
-        // Đổi màu cho floating label thành màu đen
         floatingLabelStyle: const TextStyle(color: Colors.black),
         suffixIcon: IconButton(
           icon: Icon(
@@ -270,10 +276,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           onPressed: onToggleVisibility,
         ),
          enabledBorder: OutlineInputBorder(
-             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)), // Viền khi không focus
+             borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
+             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)),
               ),
             focusedBorder: OutlineInputBorder(
-               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2), // Viền khi focus
+               borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
+               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
               ),
       ),
     );
@@ -284,15 +292,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       decoration: InputDecoration(
         labelText: 'Giới tính',
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
         ),
-        // Đổi màu cho floating label thành màu đen
         floatingLabelStyle: const TextStyle(color: Colors.black),
          enabledBorder: OutlineInputBorder(
-             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)), // Viền khi không focus
+             borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
+             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)),
               ),
             focusedBorder: OutlineInputBorder(
-               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2), // Viền khi focus
+               borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
+               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
               ),
       ),
       value: _selectedGender,
