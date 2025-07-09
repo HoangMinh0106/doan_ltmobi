@@ -1,6 +1,7 @@
 // lib/page/product_detail_screen.dart
 
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
+import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:doan_ltmobi/page/checkout_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Thêm import này
@@ -26,6 +27,7 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _quantity = 1;
+  int _cartTotalQuantity = 0;
   final NumberFormat currencyFormatter =
       NumberFormat('#,##0', 'vi_VN'); // Thêm định dạng tiền tệ
 
@@ -34,6 +36,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   static const Color textColor = Color(0xFF333333);
   static final Color secondaryTextColor = Colors.grey.shade600;
   static const Color scaffoldBackgroundColor = Colors.white;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateCartBadge();
+  }
+
+  Future<void> _updateCartBadge() async {
+    final userId = widget.userDocument['_id'] as mongo.ObjectId;
+    final count = await MongoDatabase.getCartTotalQuantity(userId);
+    if (mounted) {
+      setState(() {
+        _cartTotalQuantity = count;
+      });
+    }
+  }
 
   void _incrementQuantity() {
     setState(() {
@@ -56,6 +74,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     await MongoDatabase.addToCart(userId, widget.product, quantity: _quantity);
 
     widget.onProductAdded();
+    _updateCartBadge();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -96,6 +115,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
           shippingAddress: widget.selectedAddress,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToCart() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CartScreen(
+          userDocument: widget.userDocument,
+          onCartUpdated: _updateCartBadge,
+          selectedAddress: widget.selectedAddress,
+          onCheckoutSuccess: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
         ),
       ),
     );
@@ -214,6 +249,49 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
       ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: CircleAvatar(
+            backgroundColor: Colors.white.withOpacity(0.8),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined,
+                      color: textColor),
+                  onPressed: _navigateToCart,
+                ),
+                if (_cartTotalQuantity > 0)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$_cartTotalQuantity',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground],
         background: Hero(
