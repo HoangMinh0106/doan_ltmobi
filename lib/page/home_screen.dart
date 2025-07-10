@@ -3,7 +3,7 @@
 import 'package:doan_ltmobi/page/home_page_body.dart';
 import 'package:doan_ltmobi/page/profile_screen.dart';
 import 'package:doan_ltmobi/page/product_screen.dart';
-import 'package:doan_ltmobi/page/cart_screen.dart'; // Đã sửa lỗi import ở đây
+import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2) {
       _cartKey.currentState?.fetchCartItems();
     }
+    // Gọi hàm filterByCategory(null) để xóa bộ lọc danh mục khi rời khỏi trang sản phẩm
     if (_selectedIndex == 1 && index != 1) {
       _productScreenKey.currentState?.filterByCategory(null);
     }

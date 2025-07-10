@@ -12,7 +12,7 @@ class MongoDatabase {
   static var productCollection;
   static var cartCollection;
   static var orderCollection;
-  static var voucherCollection; // <-- Giữ lại dòng đã thêm
+  static var voucherCollection;
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -24,7 +24,7 @@ class MongoDatabase {
     productCollection = db.collection("products");
     cartCollection = db.collection("carts");
     orderCollection = db.collection("orders");
-    voucherCollection = db.collection("vouchers"); // <-- Giữ lại dòng đã thêm
+    voucherCollection = db.collection("vouchers");
   }
 
   static Future<void> insertUser(String email, String password) async {
@@ -109,7 +109,6 @@ class MongoDatabase {
     }
   }
 
-  // SỬA LẠI HÀM NÀY VỀ TRẠNG THÁI GỐC CỦA BẠN
   static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
     try {
       final orderDocument = {
@@ -119,7 +118,7 @@ class MongoDatabase {
         'shippingAddress': shippingAddress,
         'totalPrice': totalPrice,
         'orderDate': DateTime.now(),
-        'status': 'Pending', // Sử dụng 'Pending' thay vì 'Đang xử lý'
+        'status': 'Pending',
       };
       await orderCollection.insertOne(orderDocument);
     } catch (e) {
@@ -156,4 +155,56 @@ class MongoDatabase {
       return [];
     }
   }
+
+  // --- BẮT ĐẦU CHỨC NĂNG YÊU THÍCH ---
+
+  static Future<void> addToFavorites(ObjectId userId, ObjectId productId) async {
+    try {
+      await userCollection.updateOne(
+        where.id(userId),
+        modify.addToSet('favorites', productId), // Dùng addToSet để không bị trùng
+      );
+    } catch (e) {
+      print('Lỗi khi thêm vào yêu thích: $e');
+    }
+  }
+
+  static Future<void> removeFromFavorites(ObjectId userId, ObjectId productId) async {
+    try {
+      await userCollection.updateOne(
+        where.id(userId),
+        modify.pull('favorites', productId),
+      );
+    } catch (e) {
+      print('Lỗi khi xóa khỏi yêu thích: $e');
+    }
+  }
+
+  static Future<List<ObjectId>> getUserFavorites(ObjectId userId) async {
+    try {
+      final user = await userCollection.findOne(where.id(userId));
+      if (user != null && user['favorites'] != null) {
+        return (user['favorites'] as List).map((id) => id as ObjectId).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Lỗi khi lấy danh sách ID yêu thích: $e');
+      return [];
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getFavoriteProducts(ObjectId userId) async {
+    try {
+      final favoriteIds = await getUserFavorites(userId);
+      if (favoriteIds.isEmpty) {
+        return [];
+      }
+      final products = await productCollection.find(where.oneFrom('_id', favoriteIds)).toList();
+      return products;
+    } catch (e) {
+      print('Lỗi khi lấy chi tiết sản phẩm yêu thích: $e');
+      return [];
+    }
+  }
+  // --- KẾT THÚC CHỨC NĂNG YÊU THÍCH ---
 }
