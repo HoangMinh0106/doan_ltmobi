@@ -1,10 +1,11 @@
 // lib/page/profile_screen.dart
 
 import 'dart:convert';
-import 'package:doan_ltmobi/page/edit_profile_screen.dart'; // Kích hoạt lại import này
+import 'package:doan_ltmobi/page/change_password_screen.dart'; // Kích hoạt lại import này
+import 'package:doan_ltmobi/page/edit_profile_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:doan_ltmobi/page/order_history_screen.dart';
-import 'package:doan_ltmobi/page/favorites_screen.dart'; 
+import 'package:doan_ltmobi/page/favorites_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
@@ -32,8 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _currentUserDocument = widget.userDocument;
     _loadImage();
   }
-  
-  // Cập nhật lại khi có thay đổi từ widget cha
+
   @override
   void didUpdateWidget(covariant ProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -46,7 +46,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _loadImage() {
-    final String? base64String = _currentUserDocument['profile_image_base64'];
+    final String? base64String =
+        _currentUserDocument['profile_image_base64'];
     if (base64String != null && base64String.isNotEmpty) {
       final imageBytes = base64Decode(base64String);
       _imageProvider = MemoryImage(imageBytes);
@@ -55,24 +56,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Hàm này được gọi khi màn hình EditProfile trả về dữ liệu mới
   void _updateProfile(Map<String, dynamic> newDocument) {
     setState(() {
       _currentUserDocument = newDocument;
       _loadImage();
     });
-    // Báo cho HomeScreen biết để cập nhật dữ liệu toàn cục
     widget.onProfileUpdated(newDocument);
   }
 
   @override
   Widget build(BuildContext context) {
     final String email = _currentUserDocument["email"] ?? "N/A";
-    final String userName = _currentUserDocument["user"] ?? email.split('@').first;
+    final String userName =
+        _currentUserDocument["user"] ?? email.split('@').first;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hồ sơ của tôi', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Hồ sơ của tôi',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
@@ -92,9 +93,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(userName,
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
-                        Text(email, style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                        Text(email,
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey.shade600)),
                       ],
                     ),
                   ),
@@ -128,7 +133,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.edit_outlined,
             text: 'Chỉnh sửa hồ sơ',
             onTap: () async {
-              // Kích hoạt lại chức năng này
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -137,7 +141,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               );
-              // Nếu có kết quả trả về (sau khi lưu), cập nhật lại hồ sơ
               if (result != null && result is Map<String, dynamic>) {
                 _updateProfile(result);
               }
@@ -174,13 +177,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
+          // *** KÍCH HOẠT LẠI CHỨC NĂNG NÀY ***
           _buildMenuItem(
             icon: Icons.lock_outline,
             text: 'Đổi mật khẩu',
             onTap: () {
-              // Bạn có thể tạo màn hình ChangePasswordScreen tương tự
-              ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Chức năng đang được phát triển!')));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChangePasswordScreen(
+                    userId: _currentUserDocument['_id'] as mongo.ObjectId,
+                  ),
+                ),
+              );
             },
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
@@ -200,11 +209,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMenuItem({required IconData icon, required String text, VoidCallback? onTap, Color? textColor}) {
+  Widget _buildMenuItem(
+      {required IconData icon,
+      required String text,
+      VoidCallback? onTap,
+      Color? textColor}) {
     return ListTile(
       leading: Icon(icon, color: textColor ?? Colors.grey.shade700),
-      title: Text(text, style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w500)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      title: Text(text,
+          style: TextStyle(
+              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w500)),
+      trailing: const Icon(Icons.arrow_forward_ios,
+          size: 16, color: Colors.grey),
       onTap: onTap,
     );
   }

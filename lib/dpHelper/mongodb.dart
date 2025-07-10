@@ -81,7 +81,7 @@ class MongoDatabase {
       int totalQuantity = 0;
       final items = List<Map<String, dynamic>>.from(cart['items']);
       for (var item in items) {
-        totalQuantity += (item['quantity'] as int?) ?? 0;
+        totalQuantity += (item['quantity'] as num?)?.toInt() ?? 0;
       }
       return totalQuantity;
     } catch (e) {
@@ -156,13 +156,13 @@ class MongoDatabase {
     }
   }
 
-  // --- BẮT ĐẦU CHỨC NĂNG YÊU THÍCH ---
+  // --- Chức năng Yêu thích ---
 
   static Future<void> addToFavorites(ObjectId userId, ObjectId productId) async {
     try {
       await userCollection.updateOne(
         where.id(userId),
-        modify.addToSet('favorites', productId), // Dùng addToSet để không bị trùng
+        modify.addToSet('favorites', productId),
       );
     } catch (e) {
       print('Lỗi khi thêm vào yêu thích: $e');
@@ -206,5 +206,28 @@ class MongoDatabase {
       return [];
     }
   }
-  // --- KẾT THÚC CHỨC NĂNG YÊU THÍCH ---
+
+  // --- Chức năng Đổi mật khẩu ---
+
+  static Future<bool> changePassword(ObjectId userId, String oldPassword, String newPassword) async {
+    try {
+      final user = await userCollection.findOne(
+        where.id(userId).eq('password', oldPassword),
+      );
+
+      if (user == null) {
+        return false; // Mật khẩu cũ không đúng
+      }
+
+      await userCollection.updateOne(
+        where.id(userId),
+        modify.set('password', newPassword),
+      );
+      
+      return true; // Thành công
+    } catch (e) {
+      print('Lỗi khi đổi mật khẩu: $e');
+      return false;
+    }
+  }
 }
