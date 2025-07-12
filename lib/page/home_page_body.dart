@@ -67,13 +67,13 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
     _fetchFavorites();
   }
-  
+
   Future<void> _fetchFavorites() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     _favoriteProductIds = await MongoDatabase.getUserFavorites(userId);
     if(mounted) setState(() {});
   }
-  
+
   void _toggleFavorite(mongo.ObjectId productId) {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     setState(() {
@@ -111,7 +111,7 @@ class _HomePageBodyState extends State<HomePageBody> {
       }
     });
   }
-  
+
   Future<void> _chooseLocation() async {
     final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const VnLocationSearch()));
     if (result != null && mounted) {
@@ -142,11 +142,25 @@ class _HomePageBodyState extends State<HomePageBody> {
             padding: const EdgeInsets.symmetric(vertical: 16),
             children: [
               Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildHeader()),
-              const SizedBox(height: 16),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text("Xin chào,", style: TextStyle(fontSize: 22, color: Colors.grey.shade600)),
-                Text("${widget.userName}!", style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-              ])),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: RichText(
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey.shade600),
+                    children: <TextSpan>[
+                      const TextSpan(text: 'Xin chào, '),
+                      TextSpan(
+                        text: '${widget.userName}! 👋', // <-- ĐÃ THAY ĐỔI
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildSearchBar()),
               const SizedBox(height: 24),
@@ -154,7 +168,7 @@ class _HomePageBodyState extends State<HomePageBody> {
               const SizedBox(height: 12),
               _buildPromoSlider(),
               const SizedBox(height: 24),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildSectionHeader("Bán chạy nhất", () => widget.onCategorySelected(null))),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildSectionHeader("Bán chạy nhất 🔥", () => widget.onCategorySelected(null))),
               const SizedBox(height: 12),
               _buildBestSellersSection(),
               const SizedBox(height: 24),
@@ -168,22 +182,46 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
-  Widget _buildHeader() => Row(children: [_buildProfileAvatar(), const SizedBox(width: 12), Expanded(child: InkWell(
-    onTap: _chooseLocation,
-    borderRadius: BorderRadius.circular(20),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.location_on, color: primaryColor, size: 20),
-        const SizedBox(width: 6),
-        Expanded(child: Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1)),
-        const SizedBox(width: 4), 
-        const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: primaryColor),
-      ]),
+  Widget _buildHeader() => Row(children: [
+    _buildProfileAvatar(),
+    const SizedBox(width: 12),
+    Expanded(
+      child: InkWell(
+        onTap: _chooseLocation,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryColor.withAlpha(26), Colors.white],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.location_on, color: primaryColor, size: 20),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _currentCity,
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: primaryColor),
+            ],
+          ),
+        ),
+      ),
     ),
-  ))]);
-  
+  ]);
+
   Widget _buildSearchBar() => TextField(
     controller: _searchController,
     onSubmitted: widget.onSearchSubmitted,
@@ -202,8 +240,8 @@ class _HomePageBodyState extends State<HomePageBody> {
   Widget _buildSectionHeader(String title, VoidCallback onViewAll) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      TextButton(onPressed: onViewAll, child: const Text("Xem tất cả", style: TextStyle(color: primaryColor))),
+      Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333))),
+      TextButton(onPressed: onViewAll, child: const Text("Xem tất cả", style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600))),
     ],
   );
 
@@ -222,12 +260,22 @@ class _HomePageBodyState extends State<HomePageBody> {
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PromotionDetailScreen(promotion: banners[i]))),
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(26),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.network(banners[i]['imageUrl'] ?? '', fit: BoxFit.cover)),
             ),
           ),
         )),
         const SizedBox(height: 12),
-        AnimatedSmoothIndicator(activeIndex: _currentBannerIndex, count: banners.length, effect: const WormEffect(dotWidth: 8, dotHeight: 8, activeDotColor: primaryColor, dotColor: Colors.grey)),
+        AnimatedSmoothIndicator(activeIndex: _currentBannerIndex, count: banners.length, effect: const ExpandingDotsEffect(dotWidth: 8, dotHeight: 8, activeDotColor: primaryColor, dotColor: Colors.grey)),
       ]);
     },
   );
@@ -242,7 +290,23 @@ class _HomePageBodyState extends State<HomePageBody> {
         scrollDirection: Axis.horizontal,
         itemCount: products.length,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemBuilder: (context, index) => _buildProductCard(products[index]),
+        itemBuilder: (context, index) {
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 500 + (index * 100)),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: child,
+                ),
+              );
+            },
+            child: _buildProductCard(products[index]),
+          );
+        },
       ));
     },
   );
@@ -250,7 +314,7 @@ class _HomePageBodyState extends State<HomePageBody> {
   Widget _buildProductCard(Map<String, dynamic> product) {
     final productId = product['_id'] as mongo.ObjectId;
     final isFavorite = _favoriteProductIds.contains(productId);
-    
+
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.push(context, MaterialPageRoute(
@@ -322,7 +386,7 @@ class _HomePageBodyState extends State<HomePageBody> {
       child: Column(children: [
         Container(
           height: 70, width: 70, padding: const EdgeInsets.all(12),
-          decoration: const BoxDecoration(color: Color(0xFFFFF0F0), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: const Color(0xFFFFF0F0), shape: BoxShape.circle, border: Border.all(color: primaryColor.withAlpha(51))),
           child: (category['imageUrl'] != null && category['imageUrl'].isNotEmpty)
               ? Image.network(category['imageUrl'], fit: BoxFit.contain)
               : const Icon(Icons.category, size: 35, color: primaryColor),
