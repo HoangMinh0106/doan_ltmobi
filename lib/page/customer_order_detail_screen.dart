@@ -1,14 +1,25 @@
 // lib/page/customer_order_detail_screen.dart
 
+import 'package:doan_ltmobi/page/add_review_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
-class CustomerOrderDetailScreen extends StatelessWidget {
+// Chuyển thành StatefulWidget để quản lý trạng thái
+class CustomerOrderDetailScreen extends StatefulWidget {
   final Map<String, dynamic> order;
+  final Map<String, dynamic> userDocument;
 
-  const CustomerOrderDetailScreen({super.key, required this.order});
+  const CustomerOrderDetailScreen({super.key, required this.order, required this.userDocument});
 
-  // Map để dịch trạng thái từ tiếng Anh sang tiếng Việt
+  @override
+  State<CustomerOrderDetailScreen> createState() => _CustomerOrderDetailScreenState();
+}
+
+class _CustomerOrderDetailScreenState extends State<CustomerOrderDetailScreen> {
+  late Map<String, dynamic> _currentOrder;
+  bool _madeChanges = false; // Cờ để báo hiệu có thay đổi không
+
   final Map<String, String> statusMap = const {
     'Pending': 'Đang xử lý',
     'Shipping': 'Đang giao',
@@ -17,62 +28,120 @@ class CustomerOrderDetailScreen extends StatelessWidget {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _currentOrder = Map<String, dynamic>.from(widget.order);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final orderDate = order['orderDate'] as DateTime;
+    final orderDate = _currentOrder['orderDate'] as DateTime;
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
-    final currentStatusKey = order['status'] ?? 'Pending';
+    final currentStatusKey = _currentOrder['status'] ?? 'Pending';
     final translatedStatus = statusMap[currentStatusKey] ?? 'Không rõ';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết đơn hàng'),
-        backgroundColor: const Color(0xFFE57373),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Thông tin chung ---
-            _buildSectionCard(
-              title: 'Thông tin đơn hàng',
-              children: [
-                _buildInfoRow('Mã đơn hàng:', order['_id'].toHexString()),
-                _buildInfoRow('Ngày đặt:', formattedDate),
-                _buildInfoRow('Địa chỉ giao hàng:', order['shippingAddress'] ?? 'Không rõ'),
-                _buildInfoRow('Trạng thái:', translatedStatus, isStatus: true),
-                _buildInfoRow(
-                  'Tổng tiền:',
-                  '${NumberFormat('#,##0').format(order['totalPrice'])} VNĐ',
-                  isHighlighted: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+    return WillPopScope(
+      onWillPop: () async {
+        // Trả về cờ _madeChanges khi người dùng bấm nút back
+        Navigator.pop(context, _madeChanges);
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Chi tiết đơn hàng'),
+          backgroundColor: const Color(0xFFE57373),
+          foregroundColor: Colors.white,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Thông tin chung ---
+              _buildSectionCard(
+                title: 'Thông tin đơn hàng',
+                children: [
+                  _buildInfoRow('Mã đơn hàng:', _currentOrder['_id'].toHexString()),
+                  _buildInfoRow('Ngày đặt:', formattedDate),
+                  _buildInfoRow('Địa chỉ giao hàng:', _currentOrder['shippingAddress'] ?? 'Không rõ'),
+                  _buildInfoRow('Trạng thái:', translatedStatus, isStatus: true),
+                  _buildInfoRow(
+                    'Tổng tiền:',
+                    '${NumberFormat('#,##0').format(_currentOrder['totalPrice'])} VNĐ',
+                    isHighlighted: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // --- Danh sách sản phẩm ---
-            _buildSectionCard(
-              title: 'Danh sách sản phẩm',
-              children: [
-                ...?order['products']?.map<Widget>((product) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Image.network(
-                      product['imageUrl'] ?? '',
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 50),
-                    ),
-                    title: Text(product['name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Số lượng: ${product['quantity']}'),
-                    trailing: Text('${NumberFormat('#,##0').format(product['price'])} VNĐ'),
-                  );
-                }).toList(),
-              ],
-            ),
-          ],
+              // --- Danh sách sản phẩm ---
+              _buildSectionCard(
+                title: 'Danh sách sản phẩm',
+                children: [
+                  ...(_currentOrder['products'] as List).map<Widget>((product) {
+                    // =========================================================================
+                    // LOGIC QUYỀN ĐÁNH GIÁ:
+                    // - Chỉ cho phép khi đơn hàng có trạng thái là "Đã giao" ('Delivered')
+                    // - Và sản phẩm đó chưa được đánh giá (cờ 'reviewed' là false)
+                    // =========================================================================
+                    final bool canReview = (_currentOrder['status'] == 'Delivered' && product['reviewed'] != true);
+
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Image.network(
+                        product['imageUrl'] ?? '',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 50),
+                      ),
+                      title: Text(product['name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                            Text('Số lượng: ${product['quantity']}'),
+                            const SizedBox(height: 8),
+                            // ---- HIỂN THỊ NÚT "ĐÁNH GIÁ" HOẶC TRẠNG THÁI "ĐÃ ĐÁNH GIÁ" ----
+                            if (canReview)
+                                ElevatedButton.icon(
+                                    icon: const Icon(Icons.rate_review_outlined, size: 16),
+                                    label: const Text('Đánh giá'),
+                                    style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        textStyle: const TextStyle(fontSize: 12),
+                                        backgroundColor: Colors.amber.shade700,
+                                        foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () async {
+                                        final success = await showDialog<bool>(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (_) => AddReviewDialog(
+                                                userDocument: widget.userDocument,
+                                                product: product,
+                                                orderId: _currentOrder['_id'],
+                                            ),
+                                        );
+                                        // Nếu đánh giá thành công, cập nhật lại giao diện
+                                        if (success == true) {
+                                            setState(() {
+                                                product['reviewed'] = true;
+                                                _madeChanges = true; // Đánh dấu có sự thay đổi
+                                            });
+                                        }
+                                    },
+                                )
+                            else if (product['reviewed'] == true)
+                                const Text('✓ Đã đánh giá', style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic))
+                        ],
+                      ),
+                      trailing: Text('${NumberFormat('#,##0').format(product['price'])} VNĐ'),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

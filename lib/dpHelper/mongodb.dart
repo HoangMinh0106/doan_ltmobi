@@ -13,6 +13,7 @@ class MongoDatabase {
   static var cartCollection;
   static var orderCollection;
   static var voucherCollection;
+  static var reviewCollection; // Collection mới cho đánh giá
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -25,8 +26,97 @@ class MongoDatabase {
     cartCollection = db.collection("carts");
     orderCollection = db.collection("orders");
     voucherCollection = db.collection("vouchers");
+    reviewCollection = db.collection("reviews"); // Khởi tạo collection đánh giá
+  }
+  
+  // Sửa đổi hàm createOrder để thêm trường 'reviewed'
+  static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
+    try {
+      final productsForOrder = cartItems.map((item) => {
+        'productId': item['productId'],
+        'name': item['name'],
+        'price': item['price'],
+        'imageUrl': item['imageUrl'],
+        'quantity': item['quantity'],
+        'reviewed': false, // <-- QUAN TRỌNG: Cờ để kiểm tra sản phẩm đã được đánh giá chưa
+      }).toList();
+
+      final orderDocument = {
+        '_id': ObjectId(),
+        'userId': userId,
+        'products': productsForOrder,
+        'shippingAddress': shippingAddress,
+        'totalPrice': totalPrice,
+        'orderDate': DateTime.now(),
+        'status': 'Pending', // Trạng thái ban đầu
+      };
+      await orderCollection.insertOne(orderDocument);
+    } catch (e) {
+      print("Lỗi khi tạo đơn hàng: $e");
+      rethrow;
+    }
   }
 
+  // --- CÁC HÀM MỚI CHO TÍNH NĂNG ĐÁNH GIÁ ---
+
+  /// Thêm một bài đánh giá mới và cập nhật lại điểm trung bình cho sản phẩm
+  static Future<void> addReview(Map<String, dynamic> reviewData) async {
+    try {
+      // 1. Thêm bài đánh giá vào collection 'reviews'
+      await reviewCollection.insertOne(reviewData);
+
+      // 2. Tính toán lại điểm trung bình và số lượng đánh giá
+      final productId = reviewData['productId'] as ObjectId;
+      final reviews = await reviewCollection.find(where.eq('productId', productId)).toList();
+      
+      final totalReviews = reviews.length;
+      double totalRating = 0;
+      for (var review in reviews) {
+        totalRating += (review['rating'] as num).toDouble();
+      }
+      final averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
+
+      // 3. Cập nhật thông tin đánh giá vào sản phẩm tương ứng
+      await productCollection.updateOne(
+        where.id(productId),
+        modify
+          .set('rating', double.parse(averageRating.toStringAsFixed(1)))
+          .set('reviewCount', totalReviews),
+      );
+
+    } catch (e) {
+      print('Lỗi khi thêm đánh giá: $e');
+      rethrow;
+    }
+  }
+  
+  /// Lấy tất cả đánh giá của một sản phẩm
+  static Future<List<Map<String, dynamic>>> getReviewsForProduct(ObjectId productId) async {
+    try {
+      final reviews = await reviewCollection.find(
+        where.eq('productId', productId).sortBy('createdAt', descending: true)
+      ).toList();
+      return reviews;
+    } catch (e) {
+      print('Lỗi khi lấy đánh giá sản phẩm: $e');
+      return [];
+    }
+  }
+
+  /// Đánh dấu một sản phẩm trong đơn hàng là đã được đánh giá
+  static Future<void> markProductAsReviewedInOrder(ObjectId orderId, ObjectId productId) async {
+    try {
+      // Cập nhật cờ 'reviewed' thành true cho sản phẩm cụ thể trong đơn hàng cụ thể
+      await orderCollection.updateOne(
+        where.id(orderId).eq('products.productId', productId),
+        modify.set('products.\$.reviewed', true)
+      );
+    } catch (e) {
+      print("Lỗi khi đánh dấu đã đánh giá: $e");
+    }
+  }
+
+  // ... (các hàm khác giữ nguyên)
   static Future<void> insertUser(String email, String password) async {
     try {
       await userCollection.insertOne({'email': email, 'password': password});
@@ -106,24 +196,6 @@ class MongoDatabase {
       await cartCollection.update(where.eq('userId', userId), modify.pull('items', {'productId': productId}));
     } catch (e) {
       print("Lỗi khi xóa sản phẩm khỏi giỏ hàng: $e");
-    }
-  }
-
-  static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
-    try {
-      final orderDocument = {
-        '_id': ObjectId(),
-        'userId': userId,
-        'products': cartItems,
-        'shippingAddress': shippingAddress,
-        'totalPrice': totalPrice,
-        'orderDate': DateTime.now(),
-        'status': 'Pending',
-      };
-      await orderCollection.insertOne(orderDocument);
-    } catch (e) {
-      print("Lỗi khi tạo đơn hàng: $e");
-      rethrow;
     }
   }
 

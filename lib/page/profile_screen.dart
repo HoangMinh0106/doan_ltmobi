@@ -1,13 +1,14 @@
 // lib/page/profile_screen.dart
 
 import 'dart:convert';
-import 'package:doan_ltmobi/page/change_password_screen.dart'; // Kích hoạt lại import này
+import 'package:doan_ltmobi/page/change_password_screen.dart';
 import 'package:doan_ltmobi/page/edit_profile_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:doan_ltmobi/page/order_history_screen.dart';
 import 'package:doan_ltmobi/page/favorites_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
@@ -49,8 +50,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final String? base64String =
         _currentUserDocument['profile_image_base64'];
     if (base64String != null && base64String.isNotEmpty) {
-      final imageBytes = base64Decode(base64String);
-      _imageProvider = MemoryImage(imageBytes);
+      try {
+        final imageBytes = base64Decode(base64String);
+        _imageProvider = MemoryImage(imageBytes);
+      } catch (e) {
+        _imageProvider = const AssetImage("assets/image/default-avatar.png");
+      }
     } else {
       _imageProvider = const AssetImage("assets/image/default-avatar.png");
     }
@@ -62,6 +67,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _loadImage();
     });
     widget.onProfileUpdated(newDocument);
+  }
+
+  Future<void> _logout() async {
+    // Xóa email đã lưu
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_email');
+    
+    if (mounted) {
+        // Điều hướng về màn hình đăng nhập và xóa hết các màn hình cũ
+        Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false,
+        );
+    }
   }
 
   @override
@@ -171,13 +190,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(
                   builder: (context) => OrderHistoryScreen(
                     userId: _currentUserDocument['_id'] as mongo.ObjectId,
+                    // ==== SỬA LỖI TẠI ĐÂY ====
+                    // Thêm tham số userDocument còn thiếu
+                    userDocument: _currentUserDocument,
                   ),
                 ),
               );
             },
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
-          // *** KÍCH HOẠT LẠI CHỨC NĂNG NÀY ***
           _buildMenuItem(
             icon: Icons.lock_outline,
             text: 'Đổi mật khẩu',
@@ -197,12 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.logout,
             text: 'Đăng xuất',
             textColor: Colors.red,
-            onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (Route<dynamic> route) => false,
-              );
-            },
+            onTap: _logout,
           ),
         ],
       ),

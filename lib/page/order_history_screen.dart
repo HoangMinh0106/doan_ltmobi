@@ -7,7 +7,9 @@ import 'package:mongo_dart/mongo_dart.dart' as M;
 
 class OrderHistoryScreen extends StatefulWidget {
   final M.ObjectId userId;
-  const OrderHistoryScreen({super.key, required this.userId});
+  final Map<String, dynamic> userDocument;
+
+  const OrderHistoryScreen({super.key, required this.userId, required this.userDocument});
 
   @override
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
@@ -26,6 +28,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    _loadOrders();
+  }
+
+  void _loadOrders() {
     _ordersFuture = MongoDatabase.getOrdersByUserId(widget.userId);
   }
 
@@ -123,9 +129,16 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                            CustomerOrderDetailScreen(order: order),
+                            CustomerOrderDetailScreen(order: order, userDocument: widget.userDocument),
                       ),
-                    );
+                    ).then((value) {
+                        // Tải lại danh sách đơn hàng khi quay về, vì trạng thái đánh giá có thể đã thay đổi
+                        if (value == true) { // Chỉ tải lại nếu có sự thay đổi
+                           setState(() {
+                               _loadOrders();
+                           });
+                        }
+                    });
                   },
                 ),
               );

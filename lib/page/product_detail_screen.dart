@@ -1,5 +1,6 @@
 // lib/page/product_detail_screen.dart
 
+import 'dart:convert';
 import 'package:doan_ltmobi/page/cart_screen.dart';
 import 'package:doan_ltmobi/page/checkout_screen.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +13,6 @@ class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
   final VoidCallback onProductAdded;
   final String selectedAddress;
-  
-  // *** KHÔI PHỤC LẠI: Thêm lại các tham số này để nhận dữ liệu ***
   final bool isFavorite;
   final VoidCallback onFavoriteToggle;
 
@@ -28,7 +27,7 @@ class ProductDetailScreen extends StatefulWidget {
   });
 
   @override
-  _ProductDetailScreenState createState() => _ProductDetailScreenState();
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
@@ -42,10 +41,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   static final Color secondaryTextColor = Colors.grey.shade600;
   static const Color scaffoldBackgroundColor = Colors.white;
 
+  late Future<List<Map<String, dynamic>>> _reviewsFuture;
+
   @override
   void initState() {
     super.initState();
     _updateCartBadge();
+    _reviewsFuture = MongoDatabase.getReviewsForProduct(widget.product['_id']);
   }
 
   Future<void> _updateCartBadge() async {
@@ -127,7 +129,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   _buildProductHeader(
                     widget.product['name'] ?? 'N/A',
-                    (widget.product['rating'] as num?)?.toDouble() ?? 4.5,
+                    (widget.product['rating'] as num?)?.toDouble() ?? 0.0,
                     (widget.product['reviewCount'] as num?)?.toInt() ?? 0,
                   ),
                   const SizedBox(height: 24),
@@ -136,6 +138,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   _buildDivider(),
                   const SizedBox(height: 16),
                   _buildDescription(widget.product['description'] ?? 'Chưa có mô tả.'),
+                  const SizedBox(height: 24),
+                  _buildDivider(),
+                  const SizedBox(height: 16),
+                  _buildReviewsSection(),
                 ],
               ),
             ),
@@ -143,6 +149,119 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomActionButtons(),
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Đánh giá sản phẩm",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Icon(Icons.star, color: Colors.amber, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              '${(widget.product['rating'] as num?)?.toDouble() ?? 0.0}',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '/ 5.0 (${(widget.product['reviewCount'] as num?)?.toInt() ?? 0} đánh giá)',
+              style: TextStyle(fontSize: 16, color: secondaryTextColor),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: _reviewsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: primaryColor));
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              // ==== SỬA LỖI TẠI ĐÂY ====
+              // Xóa từ khóa 'const' vì secondaryTextColor không phải là hằng số
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Text(
+                    'Chưa có đánh giá nào cho sản phẩm này.',
+                    style: TextStyle(color: secondaryTextColor),
+                  ),
+                ),
+              );
+            }
+            final reviews = snapshot.data!;
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reviews.length > 3 ? 3 : reviews.length,
+              separatorBuilder: (context, index) => const Divider(height: 32),
+              itemBuilder: (context, index) {
+                return _buildReviewItem(reviews[index]);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewItem(Map<String, dynamic> review) {
+    final String? base64String = review['userAvatar'];
+    ImageProvider avatar;
+    if (base64String != null && base64String.isNotEmpty) {
+      try {
+        avatar = MemoryImage(base64Decode(base64String));
+      } catch (e) {
+        avatar = const AssetImage("assets/image/default-avatar.png");
+      }
+    } else {
+      avatar = const AssetImage("assets/image/default-avatar.png");
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(radius: 20, backgroundImage: avatar),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    review['userName'] ?? 'Người dùng',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Row(
+                    children: List.generate(5, (i) => Icon(
+                      i < (review['rating'] as num) ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: 16,
+                    )),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              DateFormat('dd/MM/yyyy').format(review['createdAt'] as DateTime),
+              style: TextStyle(color: secondaryTextColor, fontSize: 12),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          review['comment'] ?? '',
+          style: TextStyle(color: textColor.withAlpha(200), height: 1.5),
+        ),
+      ],
     );
   }
 
@@ -156,7 +275,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
         child: CircleAvatar(
-          backgroundColor: Colors.white.withOpacity(0.8),
+          // ==== SỬA LỖI TẠI ĐÂY ====
+          backgroundColor: Colors.white.withAlpha(204), // Thay .withOpacity(0.8)
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: textColor),
             onPressed: () => Navigator.of(context).pop(),
@@ -164,11 +284,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
       ),
       actions: [
-        // *** KHÔI PHỤC LẠI ICON GIỎ HÀNG, XÓA ICON TRÁI TIM ***
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
-            backgroundColor: Colors.white.withOpacity(0.8),
+            // ==== SỬA LỖI TẠI ĐÂY ====
+            backgroundColor: Colors.white.withAlpha(204), // Thay .withOpacity(0.8)
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -213,7 +333,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       padding: EdgeInsets.fromLTRB(20, 15, 20, MediaQuery.of(context).padding.bottom + 15),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 2, blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.grey.withAlpha(50), spreadRadius: 2, blurRadius: 10)],
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
@@ -255,11 +375,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         children: [
           Expanded(child: Text(name, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor))),
           const SizedBox(width: 16),
-          Row(children: [
-            const Icon(Icons.star, color: Colors.amber, size: 20),
-            const SizedBox(width: 4),
-            Text('$rating ($reviewCount)', style: TextStyle(fontSize: 16, color: secondaryTextColor)),
-          ])
+          InkWell(
+            onTap: () {},
+            child: Row(children: [
+              const Icon(Icons.star, color: Colors.amber, size: 20),
+              const SizedBox(width: 4),
+              Text('$rating ($reviewCount)', style: TextStyle(fontSize: 16, color: secondaryTextColor)),
+            ]),
+          )
         ],
       );
 
