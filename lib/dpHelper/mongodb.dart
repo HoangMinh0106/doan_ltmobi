@@ -3,6 +3,8 @@
 import 'dart:developer';
 import 'package:doan_ltmobi/dpHelper/constant.dart';
 import 'package:mongo_dart/mongo_dart.dart';
+import 'package:intl/intl.dart'; // Import để format số
+import 'package:random_string/random_string.dart'; // Import để tạo mã ngẫu nhiên
 
 class MongoDatabase {
   // Dùng 'late' để đảm bảo không cần thay đổi ở các file khác
@@ -15,7 +17,8 @@ class MongoDatabase {
   static late DbCollection orderCollection;
   static late DbCollection voucherCollection;
   static late DbCollection reviewCollection;
-  static late DbCollection customOrderCollection; // <-- Chức năng mới
+  static late DbCollection customOrderCollection;
+  static late DbCollection pointHistoryCollection; // <-- Chức năng mới
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -29,8 +32,112 @@ class MongoDatabase {
     orderCollection = db.collection("orders");
     voucherCollection = db.collection("vouchers");
     reviewCollection = db.collection("reviews");
-    customOrderCollection = db.collection("custom_orders"); // <-- Chức năng mới
+    customOrderCollection = db.collection("custom_orders");
+    pointHistoryCollection = db.collection("point_history"); // <-- Chức năng mới
   }
+
+  // Sửa hàm insertUser để thêm điểm ban đầu
+  static Future<void> insertUser(String email, String password) async {
+    try {
+      await userCollection.insertOne({
+        'email': email,
+        'password': password,
+        'loyaltyPoints': 0, // <-- Thêm điểm ban đầu cho người dùng mới
+      });
+    } catch (e) {
+      print("Lỗi khi thêm người dùng: $e");
+    }
+  }
+
+  // --- HÀM MỚI CHO TÍNH NĂNG TÍCH ĐIỂM & ĐỔI ĐIỂM ---
+
+  /// Cộng điểm cho người dùng sau khi đơn hàng hoàn thành
+  static Future<void> addPointsForOrder(Map<String, dynamic> order) async {
+    try {
+      final userId = order['userId'] as ObjectId;
+      final orderId = order['_id'] as ObjectId;
+      final totalPrice = (order['totalPrice'] as num).toDouble();
+
+      // Quy tắc mới: 1,000 VNĐ = 1 điểm
+      final pointsEarned = (totalPrice / 1000).floor();
+
+      if (pointsEarned > 0) {
+        await userCollection.updateOne(
+          where.id(userId),
+          modify.inc('loyaltyPoints', pointsEarned)
+        );
+        await pointHistoryCollection.insertOne({
+          'userId': userId,
+          'orderId': orderId,
+          'points': pointsEarned,
+          'type': 'earned',
+          'description': 'Tích điểm từ đơn hàng #${orderId.toHexString().substring(0, 6)}',
+          'date': DateTime.now(),
+        });
+      }
+    } catch (e) {
+      print("Lỗi khi cộng điểm thưởng: $e");
+    }
+  }
+
+  /// Đổi điểm lấy voucher
+  static Future<Map<String, dynamic>> redeemPointsForVoucher({
+    required ObjectId userId,
+    required int pointsToRedeem,
+    required double voucherValue,
+  }) async {
+    try {
+      final user = await userCollection.findOne(where.id(userId));
+      if (user == null || (user['loyaltyPoints'] ?? 0) < pointsToRedeem) {
+        return {'success': false, 'message': 'Bạn không đủ điểm để đổi vật phẩm này.'};
+      }
+
+      // Trừ điểm
+      await userCollection.updateOne(
+        where.id(userId),
+        modify.inc('loyaltyPoints', -pointsToRedeem)
+      );
+
+      // Ghi lịch sử
+      await pointHistoryCollection.insertOne({
+        'userId': userId,
+        'points': -pointsToRedeem,
+        'type': 'spent',
+        'description': 'Đổi $pointsToRedeem điểm nhận voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ',
+        'date': DateTime.now(),
+      });
+
+      // Tạo voucher mới
+      final voucherCode = 'REDEEM-${randomAlphaNumeric(8).toUpperCase()}';
+      await voucherCollection.insertOne({
+        'code': voucherCode,
+        'discountValue': voucherValue,
+        'discountType': 'fixed',
+        'minPurchase': 0.0,
+        'isActive': true,
+        'description': 'Voucher đổi từ $pointsToRedeem điểm',
+      });
+      
+      return {'success': true, 'message': 'Đổi điểm thành công! Mã voucher của bạn là: $voucherCode'};
+
+    } catch (e) {
+      print("Lỗi khi đổi điểm: $e");
+      return {'success': false, 'message': 'Đã xảy ra lỗi, vui lòng thử lại.'};
+    }
+  }
+
+  /// Lấy lịch sử điểm của người dùng
+  static Future<List<Map<String, dynamic>>> getPointHistory(ObjectId userId) async {
+    try {
+      return await pointHistoryCollection.find(
+        where.eq('userId', userId).sortBy('date', descending: true)
+      ).toList();
+    } catch(e) {
+      print("Lỗi khi lấy lịch sử điểm: $e");
+      return [];
+    }
+  }
+
 
   // --- Các hàm hiện có ---
 
@@ -104,14 +211,6 @@ class MongoDatabase {
       );
     } catch (e) {
       print("Lỗi khi đánh dấu đã đánh giá: $e");
-    }
-  }
-
-  static Future<void> insertUser(String email, String password) async {
-    try {
-      await userCollection.insertOne({'email': email, 'password': password});
-    } catch (e) {
-      print("Lỗi khi thêm người dùng: $e");
     }
   }
 
@@ -289,8 +388,6 @@ class MongoDatabase {
     }
   }
   
-  // --- HÀM CHO TÍNH NĂNG THỐNG KÊ ---
-
   static Future<int> getTotalUsers() async {
     try {
       final count = await userCollection.count();
@@ -368,9 +465,6 @@ class MongoDatabase {
     }
   }
 
-  // --- HÀM MỚI CHO TÍNH NĂNG ĐẶT BÁNH TÙY CHỈNH ---
-
-  /// Lưu yêu cầu đặt bánh tùy chỉnh vào database
   static Future<String> createCustomOrder(Map<String, dynamic> customOrderData) async {
     try {
       var result = await customOrderCollection.insertOne(customOrderData);

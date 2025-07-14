@@ -1,11 +1,11 @@
 // lib/page/admin/order_management_screen.dart
 
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
+import 'package:doan_ltmobi/page/admin/order_detail_screen.dart';
 import 'package:elegant_notification/elegant_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mongo_dart/mongo_dart.dart' as M;
-import 'order_detail_screen.dart';
+import 'package:mongo_dart/mongo_dart.dart' as m;
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -15,6 +15,7 @@ class OrderManagementScreen extends StatefulWidget {
 }
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
+  // SỬA LỖI: Thêm bản đồ dịch trạng thái
   final Map<String, String> statusMap = {
     'Pending': 'Đang xử lý',
     'Shipping': 'Đang giao',
@@ -22,11 +23,15 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     'Cancelled': 'Đã hủy',
   };
 
-  Future<void> _updateOrderStatus(M.ObjectId orderId, String newStatus) async {
+  Future<void> _updateOrderStatus(m.ObjectId orderId, String currentStatus, String newStatus, Map<String, dynamic> order) async {
+    if (newStatus == 'Delivered' && currentStatus != 'Delivered') {
+      await MongoDatabase.addPointsForOrder(order);
+    }
+
     try {
       await MongoDatabase.orderCollection.update(
-        M.where.id(orderId),
-        M.modify.set('status', newStatus),
+        m.where.id(orderId),
+        m.modify.set('status', newStatus),
       );
       if (mounted) {
         ElegantNotification.success(
@@ -45,9 +50,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
   }
 
-  // --- THÊM MỚI HÀM NÀY ---
-  /// Xử lý việc xóa một đơn hàng sau khi có xác nhận.
-  Future<void> _deleteOrder(M.ObjectId orderId) async {
+  Future<void> _deleteOrder(m.ObjectId orderId) async {
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -77,7 +80,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             description: const Text("Đã xóa đơn hàng thành công."),
           ).show(context);
         }
-        setState(() {}); // Tải lại danh sách sau khi xóa
+        setState(() {});
       } catch (e) {
         if (mounted) {
           ElegantNotification.error(
@@ -97,7 +100,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         backgroundColor: Colors.redAccent,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: MongoDatabase.orderCollection.find(M.where.sortBy('orderDate', descending: true)).toList(),
+        future: MongoDatabase.orderCollection.find(m.where.sortBy('orderDate', descending: true)).toList(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -115,79 +118,78 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
-              final orderDate = order['orderDate'] as DateTime;
-              final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
-              
-              String currentStatus = order['status'] ?? 'Pending';
-              if (!statusMap.containsKey(currentStatus)) {
-                currentStatus = 'Pending';
-              }
+              final currentStatus = order['status'] ?? 'Pending';
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, left: 16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => OrderDetailScreen(order: order),
-                              ),
-                            ).then((_) {
-                              setState(() {});
-                            });
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                child: ExpansionTile(
+                  title: Text('Đơn hàng: #${order['_id'].toHexString().substring(0, 8)}...'),
+                  // SỬA LỖI: Hiển thị trạng thái tiếng Việt
+                  subtitle: Text("Ngày: ${DateFormat('dd/MM/yyyy').format(order['orderDate'])} - Trạng thái: ${statusMap[currentStatus] ?? currentStatus}"),
+                  children: <Widget>[
+                     Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...?(order['products'] as List?)?.map<Widget>((product) {
+                            return ListTile(
+                              leading: Image.network(product['imageUrl'] ?? '', width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image_not_supported)),
+                              title: Text(product['name'] ?? 'N/A'),
+                              subtitle: Text("Số lượng: ${product['quantity']}"),
+                            );
+                          }).toList(),
+                          const Divider(),
+                          InkWell(
+                            onTap: () {
+                                Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => OrderDetailScreen(order: order),
+                                ),
+                                ).then((_) {
+                                setState(() {});
+                                });
+                            },
+                            child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text("Xem chi tiết đơn hàng...", style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
+                            ),
+                          ),
+                          const Divider(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Mã đơn: ${order['_id'].toHexString()}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Ngày đặt: $formattedDate\nTổng tiền: ${NumberFormat('#,##0').format(order['totalPrice'])} VNĐ',
+                              const Text("Cập nhật trạng thái:", style: TextStyle(fontWeight: FontWeight.bold)),
+                              DropdownButton<String>(
+                                value: currentStatus,
+                                // SỬA LỖI: Dùng map để hiển thị tiếng Việt
+                                items: statusMap.keys.map((String key) {
+                                  return DropdownMenuItem<String>(
+                                    value: key,
+                                    child: Text(statusMap[key]!),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null && newValue != currentStatus) {
+                                    _updateOrderStatus(order['_id'], currentStatus, newValue, order);
+                                  }
+                                },
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 150,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            DropdownButton<String>(
-                              value: currentStatus,
-                              items: statusMap.keys.map((String key) {
-                                return DropdownMenuItem<String>(
-                                  value: key,
-                                  child: Text(statusMap[key]!, style: const TextStyle(fontSize: 14)),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  _updateOrderStatus(order['_id'], newValue);
-                                }
-                              },
-                              underline: const SizedBox(),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                tooltip: 'Xóa đơn hàng',
+                                onPressed: () => _deleteOrder(order['_id']),
                             ),
-                            // Nút để xóa đơn hàng
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                              tooltip: 'Xóa đơn hàng',
-                              onPressed: () => _deleteOrder(order['_id']),
-                            ),
-                          ],
-                        ),
+                          )
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
