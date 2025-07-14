@@ -8,7 +8,8 @@ import 'package:doan_ltmobi/page/admin/order_management_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'voucher_management_screen.dart';
-import 'statistics_screen.dart'; // <-- THÊM IMPORT NÀY
+import 'statistics_screen.dart';
+import 'custom_order_management_screen.dart'; // <-- Import chức năng mới
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -105,19 +106,6 @@ class AdminScreen extends StatelessWidget {
             ),
             _buildDashboardCard(
               context: context,
-              icon: Icons.campaign_outlined,
-              title: 'Quản lý khuyến mãi',
-              color: Colors.red,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const PromotionManagementScreen()),
-                );
-              },
-            ),
-            _buildDashboardCard(
-              context: context,
               icon: Icons.receipt_long_outlined,
               title: 'Quản lý đơn hàng',
               color: Colors.teal,
@@ -129,7 +117,7 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-            _buildDashboardCard( 
+            _buildDashboardCard(
               context: context,
               icon: Icons.local_offer_outlined,
               title: 'Quản lý Voucher',
@@ -147,10 +135,35 @@ class AdminScreen extends StatelessWidget {
               title: 'Thống kê',
               color: Colors.purple,
               onTap: () {
-                // ĐÃ CẬP NHẬT LOGIC ĐIỀU HƯỚNG
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const StatisticsScreen()),
+                );
+              },
+            ),
+            // Gộp chức năng mới vào đây
+            _buildDashboardCard(
+              context: context,
+              icon: Icons.cake_outlined,
+              title: 'Bánh đặt tùy chỉnh',
+              color: Colors.pink,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CustomOrderManagementScreen()),
+                );
+              },
+            ),
+             _buildDashboardCard(
+              context: context,
+              icon: Icons.campaign_outlined,
+              title: 'Quản lý khuyến mãi',
+              color: Colors.red,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const PromotionManagementScreen()),
                 );
               },
             ),

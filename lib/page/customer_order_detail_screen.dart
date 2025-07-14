@@ -99,10 +99,10 @@ class _CustomerOrderDetailScreenState extends State<CustomerOrderDetailScreen> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                            Text('Số lượng: ${product['quantity']}'),
-                            const SizedBox(height: 8),
-                            // ---- HIỂN THỊ NÚT "ĐÁNH GIÁ" HOẶC TRẠNG THÁI "ĐÃ ĐÁNH GIÁ" ----
-                            if (canReview)
+                              Text('Số lượng: ${product['quantity']}'),
+                              const SizedBox(height: 8),
+                              // ---- HIỂN THỊ NÚT "ĐÁNH GIÁ" HOẶC TRẠNG THÁI "ĐÃ ĐÁNH GIÁ" ----
+                              if (canReview)
                                 ElevatedButton.icon(
                                     icon: const Icon(Icons.rate_review_outlined, size: 16),
                                     label: const Text('Đánh giá'),
@@ -131,7 +131,7 @@ class _CustomerOrderDetailScreenState extends State<CustomerOrderDetailScreen> {
                                         }
                                     },
                                 )
-                            else if (product['reviewed'] == true)
+                              else if (product['reviewed'] == true)
                                 const Text('✓ Đã đánh giá', style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic))
                         ],
                       ),

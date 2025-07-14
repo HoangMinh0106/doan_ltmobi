@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:doan_ltmobi/page/custom_cake_order_screen.dart'; // Đã có import
 import 'package:doan_ltmobi/page/product_detail_screen.dart';
 import 'package:doan_ltmobi/page/promotion_detail_screen.dart';
 import 'package:doan_ltmobi/page/promotions_screen.dart';
@@ -151,7 +152,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                     children: <TextSpan>[
                       const TextSpan(text: 'Xin chào, '),
                       TextSpan(
-                        text: '${widget.userName}! 👋', // <-- ĐÃ THAY ĐỔI
+                        text: '${widget.userName}! 👋',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF333333),
@@ -164,6 +165,9 @@ class _HomePageBodyState extends State<HomePageBody> {
               const SizedBox(height: 24),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildSearchBar()),
               const SizedBox(height: 24),
+              
+              _buildCustomOrderBanner(context),
+              
               Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildSectionHeader("Ưu đãi đặc biệt", () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PromotionsScreen())))),
               const SizedBox(height: 12),
               _buildPromoSlider(),
@@ -177,6 +181,60 @@ class _HomePageBodyState extends State<HomePageBody> {
               _buildCategorySection(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomOrderBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CustomCakeOrderScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.pink[50],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              spreadRadius: 1,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Thiết kế bánh của riêng bạn",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFAD1457),
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text("Gửi yêu cầu và nhận báo giá ngay!"),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.cake_outlined,
+              color: Color(0xFFAD1457),
+              size: 40,
+            )
+          ],
         ),
       ),
     );

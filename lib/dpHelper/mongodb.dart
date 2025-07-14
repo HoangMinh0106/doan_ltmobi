@@ -15,6 +15,7 @@ class MongoDatabase {
   static late DbCollection orderCollection;
   static late DbCollection voucherCollection;
   static late DbCollection reviewCollection;
+  static late DbCollection customOrderCollection; // <-- Chức năng mới
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -28,9 +29,10 @@ class MongoDatabase {
     orderCollection = db.collection("orders");
     voucherCollection = db.collection("vouchers");
     reviewCollection = db.collection("reviews");
+    customOrderCollection = db.collection("custom_orders"); // <-- Chức năng mới
   }
 
-  // --- Toàn bộ các hàm bên dưới không thay đổi, hoạt động như cũ ---
+  // --- Các hàm hiện có ---
 
   static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
     try {
@@ -287,7 +289,7 @@ class MongoDatabase {
     }
   }
   
-  // --- CÁC HÀM MỚI CHO TÍNH NĂNG THỐNG KÊ ---
+  // --- HÀM CHO TÍNH NĂNG THỐNG KÊ ---
 
   static Future<int> getTotalUsers() async {
     try {
@@ -326,7 +328,6 @@ class MongoDatabase {
         {'\$group': {'_id': null, 'totalRevenue': {'\$sum': '\$totalPrice'}}}
       ];
       
-      // SỬA LỖI: aggregateToStream trả về List, khắc phục lỗi 'first'
       final result = await orderCollection.aggregateToStream(pipeline).toList();
       
       if (result.isNotEmpty && result.first['totalRevenue'] != null) {
@@ -345,7 +346,6 @@ class MongoDatabase {
         {'\$group': {'_id': '\$status', 'count': {'\$sum': 1}}}
       ];
       
-      // SỬA LỖI: aggregateToStream trả về List, khắc phục lỗi vòng lặp 'for'
       final result = await orderCollection.aggregateToStream(pipeline).toList();
       
       final Map<String, int> statusCounts = {
@@ -365,6 +365,23 @@ class MongoDatabase {
     } catch (e) {
       print('Lỗi khi lấy số lượng đơn hàng theo trạng thái: $e');
       return {};
+    }
+  }
+
+  // --- HÀM MỚI CHO TÍNH NĂNG ĐẶT BÁNH TÙY CHỈNH ---
+
+  /// Lưu yêu cầu đặt bánh tùy chỉnh vào database
+  static Future<String> createCustomOrder(Map<String, dynamic> customOrderData) async {
+    try {
+      var result = await customOrderCollection.insertOne(customOrderData);
+      if (result.isSuccess) {
+        return "Yêu cầu của bạn đã được gửi đi thành công!";
+      } else {
+        return "Gửi yêu cầu thất bại: ${result.errmsg}";
+      }
+    } catch (e) {
+      print('Lỗi khi tạo đơn hàng tùy chỉnh: $e');
+      return "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.";
     }
   }
 }
