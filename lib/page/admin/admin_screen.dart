@@ -7,7 +7,8 @@ import 'package:doan_ltmobi/page/admin/promotion_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/order_management_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
-import 'voucher_management_screen.dart'; // <-- THÊM MỚI
+import 'voucher_management_screen.dart';
+import 'statistics_screen.dart'; // <-- THÊM IMPORT NÀY
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -128,7 +129,7 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-            _buildDashboardCard( // <-- THÊM CARD MỚI
+            _buildDashboardCard( 
               context: context,
               icon: Icons.local_offer_outlined,
               title: 'Quản lý Voucher',
@@ -146,7 +147,11 @@ class AdminScreen extends StatelessWidget {
               title: 'Thống kê',
               color: Colors.purple,
               onTap: () {
-                // TODO: Thêm logic điều hướng đến trang thống kê
+                // ĐÃ CẬP NHẬT LOGIC ĐIỀU HƯỚNG
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const StatisticsScreen()),
+                );
               },
             ),
           ],

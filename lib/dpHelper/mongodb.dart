@@ -1,19 +1,20 @@
 // lib/dpHelper/mongodb.dart
 
 import 'dart:developer';
-
 import 'package:doan_ltmobi/dpHelper/constant.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 
 class MongoDatabase {
-  static var db, userCollection;
-  static var bannerCollection;
-  static var categoryCollection;
-  static var productCollection;
-  static var cartCollection;
-  static var orderCollection;
-  static var voucherCollection;
-  static var reviewCollection; // Collection mới cho đánh giá
+  // Dùng 'late' để đảm bảo không cần thay đổi ở các file khác
+  static late Db db;
+  static late DbCollection userCollection;
+  static late DbCollection bannerCollection;
+  static late DbCollection categoryCollection;
+  static late DbCollection productCollection;
+  static late DbCollection cartCollection;
+  static late DbCollection orderCollection;
+  static late DbCollection voucherCollection;
+  static late DbCollection reviewCollection;
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -26,10 +27,11 @@ class MongoDatabase {
     cartCollection = db.collection("carts");
     orderCollection = db.collection("orders");
     voucherCollection = db.collection("vouchers");
-    reviewCollection = db.collection("reviews"); // Khởi tạo collection đánh giá
+    reviewCollection = db.collection("reviews");
   }
-  
-  // Sửa đổi hàm createOrder để thêm trường 'reviewed'
+
+  // --- Toàn bộ các hàm bên dưới không thay đổi, hoạt động như cũ ---
+
   static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
     try {
       final productsForOrder = cartItems.map((item) => {
@@ -38,7 +40,7 @@ class MongoDatabase {
         'price': item['price'],
         'imageUrl': item['imageUrl'],
         'quantity': item['quantity'],
-        'reviewed': false, // <-- QUAN TRỌNG: Cờ để kiểm tra sản phẩm đã được đánh giá chưa
+        'reviewed': false,
       }).toList();
 
       final orderDocument = {
@@ -48,7 +50,7 @@ class MongoDatabase {
         'shippingAddress': shippingAddress,
         'totalPrice': totalPrice,
         'orderDate': DateTime.now(),
-        'status': 'Pending', // Trạng thái ban đầu
+        'status': 'Pending',
       };
       await orderCollection.insertOne(orderDocument);
     } catch (e) {
@@ -57,40 +59,29 @@ class MongoDatabase {
     }
   }
 
-  // --- CÁC HÀM MỚI CHO TÍNH NĂNG ĐÁNH GIÁ ---
-
-  /// Thêm một bài đánh giá mới và cập nhật lại điểm trung bình cho sản phẩm
   static Future<void> addReview(Map<String, dynamic> reviewData) async {
     try {
-      // 1. Thêm bài đánh giá vào collection 'reviews'
       await reviewCollection.insertOne(reviewData);
-
-      // 2. Tính toán lại điểm trung bình và số lượng đánh giá
       final productId = reviewData['productId'] as ObjectId;
       final reviews = await reviewCollection.find(where.eq('productId', productId)).toList();
-      
       final totalReviews = reviews.length;
       double totalRating = 0;
       for (var review in reviews) {
         totalRating += (review['rating'] as num).toDouble();
       }
       final averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
-
-      // 3. Cập nhật thông tin đánh giá vào sản phẩm tương ứng
       await productCollection.updateOne(
         where.id(productId),
         modify
           .set('rating', double.parse(averageRating.toStringAsFixed(1)))
           .set('reviewCount', totalReviews),
       );
-
     } catch (e) {
       print('Lỗi khi thêm đánh giá: $e');
       rethrow;
     }
   }
-  
-  /// Lấy tất cả đánh giá của một sản phẩm
+
   static Future<List<Map<String, dynamic>>> getReviewsForProduct(ObjectId productId) async {
     try {
       final reviews = await reviewCollection.find(
@@ -103,10 +94,8 @@ class MongoDatabase {
     }
   }
 
-  /// Đánh dấu một sản phẩm trong đơn hàng là đã được đánh giá
   static Future<void> markProductAsReviewedInOrder(ObjectId orderId, ObjectId productId) async {
     try {
-      // Cập nhật cờ 'reviewed' thành true cho sản phẩm cụ thể trong đơn hàng cụ thể
       await orderCollection.updateOne(
         where.id(orderId).eq('products.productId', productId),
         modify.set('products.\$.reviewed', true)
@@ -116,7 +105,6 @@ class MongoDatabase {
     }
   }
 
-  // ... (các hàm khác giữ nguyên)
   static Future<void> insertUser(String email, String password) async {
     try {
       await userCollection.insertOne({'email': email, 'password': password});
@@ -163,7 +151,7 @@ class MongoDatabase {
       return null;
     }
   }
-  
+
   static Future<int> getCartTotalQuantity(ObjectId userId) async {
     try {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
@@ -228,8 +216,6 @@ class MongoDatabase {
     }
   }
 
-  // --- Chức năng Yêu thích ---
-
   static Future<void> addToFavorites(ObjectId userId, ObjectId productId) async {
     try {
       await userCollection.updateOne(
@@ -279,8 +265,6 @@ class MongoDatabase {
     }
   }
 
-  // --- Chức năng Đổi mật khẩu ---
-
   static Future<bool> changePassword(ObjectId userId, String oldPassword, String newPassword) async {
     try {
       final user = await userCollection.findOne(
@@ -288,7 +272,7 @@ class MongoDatabase {
       );
 
       if (user == null) {
-        return false; // Mật khẩu cũ không đúng
+        return false;
       }
 
       await userCollection.updateOne(
@@ -296,10 +280,91 @@ class MongoDatabase {
         modify.set('password', newPassword),
       );
       
-      return true; // Thành công
+      return true;
     } catch (e) {
       print('Lỗi khi đổi mật khẩu: $e');
       return false;
+    }
+  }
+  
+  // --- CÁC HÀM MỚI CHO TÍNH NĂNG THỐNG KÊ ---
+
+  static Future<int> getTotalUsers() async {
+    try {
+      final count = await userCollection.count();
+      return count;
+    } catch (e) {
+      print('Lỗi khi lấy tổng số người dùng: $e');
+      return 0;
+    }
+  }
+
+  static Future<int> getTotalProducts() async {
+    try {
+      final count = await productCollection.count();
+      return count;
+    } catch (e) {
+      print('Lỗi khi lấy tổng số sản phẩm: $e');
+      return 0;
+    }
+  }
+
+  static Future<int> getTotalOrders() async {
+    try {
+      final count = await orderCollection.count();
+      return count;
+    } catch (e) {
+      print('Lỗi khi lấy tổng số đơn hàng: $e');
+      return 0;
+    }
+  }
+
+  static Future<double> getTotalRevenue() async {
+    try {
+      final pipeline = [
+        {'\$match': {'status': 'Delivered'}},
+        {'\$group': {'_id': null, 'totalRevenue': {'\$sum': '\$totalPrice'}}}
+      ];
+      
+      // SỬA LỖI: aggregateToStream trả về List, khắc phục lỗi 'first'
+      final result = await orderCollection.aggregateToStream(pipeline).toList();
+      
+      if (result.isNotEmpty && result.first['totalRevenue'] != null) {
+        return (result.first['totalRevenue'] as num).toDouble();
+      }
+      return 0.0;
+    } catch (e) {
+      print('Lỗi khi tính tổng doanh thu: $e');
+      return 0.0;
+    }
+  }
+
+  static Future<Map<String, int>> getOrderStatusCounts() async {
+    try {
+      final pipeline = [
+        {'\$group': {'_id': '\$status', 'count': {'\$sum': 1}}}
+      ];
+      
+      // SỬA LỖI: aggregateToStream trả về List, khắc phục lỗi vòng lặp 'for'
+      final result = await orderCollection.aggregateToStream(pipeline).toList();
+      
+      final Map<String, int> statusCounts = {
+        'Pending': 0,
+        'Shipping': 0,
+        'Delivered': 0,
+        'Cancelled': 0,
+      };
+
+      for (var doc in result) {
+        if (doc['_id'] != null && statusCounts.containsKey(doc['_id'])) {
+          statusCounts[doc['_id']] = doc['count'];
+        }
+      }
+      return statusCounts;
+
+    } catch (e) {
+      print('Lỗi khi lấy số lượng đơn hàng theo trạng thái: $e');
+      return {};
     }
   }
 }
