@@ -15,12 +15,12 @@ class OrderManagementScreen extends StatefulWidget {
 }
 
 class _OrderManagementScreenState extends State<OrderManagementScreen> {
-  // SỬA LỖI: Thêm bản đồ dịch trạng thái
   final Map<String, String> statusMap = {
     'Pending': 'Đang xử lý',
     'Shipping': 'Đang giao',
     'Delivered': 'Đã giao',
     'Cancelled': 'Đã hủy',
+    'Awaiting Payment': 'Chờ thanh toán', // Thêm trạng thái mới nếu có
   };
 
   Future<void> _updateOrderStatus(m.ObjectId orderId, String currentStatus, String newStatus, Map<String, dynamic> order) async {
@@ -56,7 +56,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Xác nhận xóa'),
-          content: const Text('Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng này không? Hành động này không thể hoàn tác.'),
+          content: const Text('Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng này không?'),
           actions: <Widget>[
             TextButton(
               child: const Text('Hủy'),
@@ -118,13 +118,16 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
-              final currentStatus = order['status'] ?? 'Pending';
+              // SỬA LỖI: Kiểm tra nếu trạng thái có hợp lệ không, nếu không thì mặc định là 'Pending'
+              String currentStatus = order['status'] ?? 'Pending';
+              if (!statusMap.containsKey(currentStatus)) {
+                currentStatus = 'Pending';
+              }
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 child: ExpansionTile(
                   title: Text('Đơn hàng: #${order['_id'].toHexString().substring(0, 8)}...'),
-                  // SỬA LỖI: Hiển thị trạng thái tiếng Việt
                   subtitle: Text("Ngày: ${DateFormat('dd/MM/yyyy').format(order['orderDate'])} - Trạng thái: ${statusMap[currentStatus] ?? currentStatus}"),
                   children: <Widget>[
                      Padding(
@@ -163,7 +166,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                               const Text("Cập nhật trạng thái:", style: TextStyle(fontWeight: FontWeight.bold)),
                               DropdownButton<String>(
                                 value: currentStatus,
-                                // SỬA LỖI: Dùng map để hiển thị tiếng Việt
                                 items: statusMap.keys.map((String key) {
                                   return DropdownMenuItem<String>(
                                     value: key,

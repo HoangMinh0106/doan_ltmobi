@@ -1,9 +1,11 @@
 // lib/page/checkout_screen.dart
+
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/success_dialog.dart';
-import 'package:doan_ltmobi/page/vn_location_search.dart'; // <--- Đảm bảo import đúng
+import 'package:doan_ltmobi/page/vietqr_payment_screen.dart';
+import 'package:doan_ltmobi/page/vn_location_search.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart'; // <-- SỬA LỖI: Thêm dòng import bị thiếu
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:flutter_paypal_payment/flutter_paypal_payment.dart';
 
@@ -28,8 +30,6 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  // ──────────────────────────────────────────────────────────────
-  // STATE
   bool _isProcessing = false;
   String _paymentMethod = 'cod';
   late String _selectedAddress;
@@ -39,12 +39,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double _discountAmount = 0.0;
   String _voucherMessage = '';
 
-  final NumberFormat _currency =
-      NumberFormat('#,##0', 'vi_VN');
+  final NumberFormat _currency = NumberFormat('#,##0', 'vi_VN');
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color secondaryTextColor = Colors.grey;
-  // ──────────────────────────────────────────────────────────────
 
   @override
   void initState() {
@@ -52,12 +50,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _selectedAddress = widget.shippingAddress.trim();
   }
 
-  // ──────────────────────────────────────────────────────────────
-  // SỬA LỖI TẠI ĐÂY
   Future<void> _selectAddress() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const VnLocationSearch()), // SỬA TÊN CLASS TẠI ĐÂY
+      MaterialPageRoute(builder: (_) => const VnLocationSearch()),
     );
 
     if (result != null && mounted) {
@@ -68,7 +64,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
     }
   }
-  // ──────────────────────────────────────────────────────────────
 
   Future<void> _applyVoucher() async {
     final code = _voucherController.text.trim().toUpperCase();
@@ -103,7 +98,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (discountType == 'percent') {
       discount = (widget.totalPrice * discountValue) / 100;
-    } else { // fixed
+    } else {
       discount = discountValue;
     }
 
@@ -115,7 +110,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _processOrderCreation() async {
-     if (_selectedAddress.isEmpty) {
+    if (_selectedAddress.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng chọn địa chỉ giao hàng!')),
       );
@@ -154,6 +149,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _processVietQROrder() async {
+    if (_selectedAddress.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn địa chỉ giao hàng!')),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+    try {
+        final userId = widget.userDocument['_id'] as mongo.ObjectId;
+        final finalPrice = widget.totalPrice - _discountAmount;
+        final newOrderId = mongo.ObjectId();
+
+        await MongoDatabase.orderCollection.insertOne({
+          '_id': newOrderId,
+          'userId': userId,
+          'products': widget.cartItems,
+          'shippingAddress': _selectedAddress,
+          'totalPrice': finalPrice,
+          'orderDate': DateTime.now(),
+          'status': 'Awaiting Payment', // Trạng thái chờ thanh toán
+        });
+        await MongoDatabase.clearCart(userId);
+        widget.onOrderPlaced();
+
+        if (mounted) {
+            Navigator.of(context).push(
+            MaterialPageRoute(
+                builder: (context) => VietQRPaymentScreen(
+                amount: finalPrice,
+                orderId: newOrderId.toHexString(),
+                ),
+            ),
+            );
+        }
+    } catch (e) {
+        if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('Lỗi khi tạo đơn hàng QR: $e')));
+        }
+    } finally {
+        if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -209,8 +250,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _handleConfirmOrder() =>
-      _paymentMethod == 'paypal' ? _payWithPayPal() : _processOrderCreation();
+  void _handleConfirmOrder() {
+    if (_paymentMethod == 'paypal') {
+        _payWithPayPal();
+    } else if (_paymentMethod == 'vietqr') {
+        _processVietQROrder();
+    } else {
+        _processOrderCreation();
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -243,8 +291,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _buildPaymentOption(
                 title: 'Thanh toán khi nhận hàng',
                 value: 'cod',
-                icon: const Icon(Icons.local_shipping_outlined,
-                    color: Colors.brown, size: 28),
+                icon: const Icon(Icons.local_shipping_outlined, color: Colors.brown, size: 28),
+              ),
+              _buildPaymentOption(
+                title: 'Chuyển khoản VietQR',
+                value: 'vietqr',
+                icon: const Icon(Icons.qr_code_2, color: Colors.indigo, size: 28),
               ),
               _buildPaymentOption(
                 title: 'Thanh toán qua VNPAY',
@@ -513,9 +565,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             color: Colors.white, strokeWidth: 3),
                       )
                     : Text(
-                        _paymentMethod == 'cod'
-                            ? 'Đặt hàng'
-                            : 'Thanh toán với ${_paymentMethod.toUpperCase()}',
+                        _paymentMethod == 'cod' ? 'Đặt hàng' : (_paymentMethod == 'vietqr' ? 'Tạo mã VietQR' : 'Thanh toán với ${_paymentMethod.toUpperCase()}'),
                         style: const TextStyle(
                             fontSize: 18,
                             color: Colors.white,
