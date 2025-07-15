@@ -1,8 +1,7 @@
-// lib/page/admin/statistics_screen.dart
-
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';  // Import cho fl_chart
 
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
@@ -51,7 +50,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Thống kê & Báo cáo'),
-        backgroundColor: Colors.purple,
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -79,7 +79,15 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text(
+                  'Tổng quan chỉ số',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                _buildOverviewBarChart(stats),
+                const SizedBox(height: 24),
                 _buildStatsGrid(stats),
                 const SizedBox(height: 24),
                 _buildOrderStatusSection(orderStatusCounts),
@@ -87,6 +95,91 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildOverviewBarChart(Map<String, dynamic> stats) {
+    final barData = [
+      {'title': 'Người\ndùng', 'value': (stats['totalUsers'] ?? 0).toDouble(), 'color': Colors.blue},
+      {'title': 'Sản\nphẩm', 'value': (stats['totalProducts'] ?? 0).toDouble(), 'color': Colors.orange},
+      {'title': 'Đơn\nhàng', 'value': (stats['totalOrders'] ?? 0).toDouble(), 'color': Colors.teal},
+      {'title': 'Doanh thu\n(triệu)', 'value': ((stats['totalRevenue'] ?? 0) / 1000000).toDouble(), 'color': Colors.green},
+    ];
+
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: SizedBox(
+          height: 380,  // Tăng chiều cao để biểu đồ cột rộng hơn
+          child: BarChart(
+            BarChartData(
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (group) => Colors.white.withValues(alpha: 0.9),
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final fullTitle = ['Người dùng', 'Sản phẩm', 'Đơn hàng', 'Doanh thu (triệu VNĐ)'][group.x];
+                    return BarTooltipItem(
+                      '$fullTitle\n${rod.toY}',
+                      const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                    );
+                  },
+                ),
+              ),
+              barGroups: barData.asMap().entries.map((entry) {
+                final index = entry.key;
+                final data = entry.value;
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: data['value'] as double,
+                      gradient: LinearGradient(
+                        colors: [
+                          (data['color'] as Color).withValues(alpha: 0.7),
+                          data['color'] as Color
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                      width: 28,
+                      borderRadius: BorderRadius.circular(6),
+                      backDrawRodData: BackgroundBarChartRodData(show: true, toY: 0, color: Colors.transparent),
+                    ),
+                  ],
+                  barsSpace: 12,
+                );
+              }).toList(),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 80,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          barData[index]['title'] as String,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              gridData: const FlGridData(show: false),
+            ),
+            swapAnimationDuration: const Duration(milliseconds: 800),
+            swapAnimationCurve: Curves.easeInOut,
+          ),
+        ),
       ),
     );
   }
@@ -136,8 +229,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     bool isCurrency = false,
   }) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -153,6 +246,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               style: TextStyle(
                 fontSize: isCurrency ? 18 : 24,
                 fontWeight: FontWeight.bold,
+                color: color.withValues(alpha: 0.9),
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
@@ -163,6 +257,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     );
   }
 
+  // Pie Chart: Xóa toàn bộ chữ trên biểu đồ, giữ note màu ở ngoài
   Widget _buildOrderStatusSection(Map<String, int> statusCounts) {
     final statusMap = {
       'Pending': 'Đang xử lý',
@@ -176,11 +271,24 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       'Delivered': Colors.green,
       'Cancelled': Colors.red,
     };
-    final total = statusCounts.values.fold(0, (sum, count) => sum + count);
+
+    List<PieChartSectionData> pieSections = [];
+    for (var key in statusMap.keys) {
+      final count = statusCounts[key] ?? 0;
+      pieSections.add(
+        PieChartSectionData(
+          color: statusColors[key]!,
+          value: count.toDouble(),
+          title: '',  // Xóa toàn bộ chữ trên biểu đồ
+          radius: 120,
+          showTitle: false,  // Đảm bảo không hiển thị title
+        ),
+      );
+    }
 
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -191,55 +299,44 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
+            SizedBox(
+              height: 300,  // Giữ nguyên chiều cao của biểu đồ hình tròn
+              child: PieChart(
+                PieChartData(
+                  sections: pieSections,
+                  centerSpaceRadius: 50,
+                  sectionsSpace: 2,
+                  pieTouchData: PieTouchData(enabled: true),
+                ),
+                swapAnimationDuration: const Duration(milliseconds: 800),
+                swapAnimationCurve: Curves.easeInOut,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Phần note màu ở ngoài
+            const Text(
+              'Chú thích màu:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
             ...statusMap.keys.map((key) {
-              final count = statusCounts[key] ?? 0;
-              final percentage = total > 0 ? (count / total) * 100 : 0.0;
-              return _buildOrderStatusRow(
-                title: statusMap[key]!,
-                count: count,
-                percentage: percentage,
-                color: statusColors[key]!,
+              return Row(
+                children: [
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: statusColors[key],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(statusMap[key]!),
+                ],
               );
             }).toList(),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildOrderStatusRow({
-    required String title,
-    required int count,
-    required double percentage,
-    required Color color,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.circle, color: color, size: 12),
-                    const SizedBox(width: 8),
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
-                    const Spacer(),
-                    Text('$count', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: percentage / 100,
-                  backgroundColor: color.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

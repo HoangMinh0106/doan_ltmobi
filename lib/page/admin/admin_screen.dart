@@ -1,5 +1,3 @@
-// lib/page/admin/admin_screen.dart
-
 import 'package:doan_ltmobi/page/admin/user_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/category_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/product_management_screen.dart';
@@ -60,7 +58,7 @@ class AdminScreen extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
+        child: GridView.count(  // Khôi phục layout lưới gốc với 2 cột
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
@@ -141,7 +139,6 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-            // Gộp chức năng mới vào đây
             _buildDashboardCard(
               context: context,
               icon: Icons.cake_outlined,
@@ -154,7 +151,7 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-             _buildDashboardCard(
+            _buildDashboardCard(
               context: context,
               icon: Icons.campaign_outlined,
               title: 'Quản lý khuyến mãi',

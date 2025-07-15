@@ -45,6 +45,9 @@ dependencies:
   geolocator: ^10.1.0
   geocoding: ^2.2.0
 
+  # Thêm từ hướng dẫn trước (cho biểu đồ)
+  fl_chart: ^0.68.0  # Phiên bản mới nhất tính đến ngày 15/07/2025
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
