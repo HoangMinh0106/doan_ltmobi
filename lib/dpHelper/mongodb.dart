@@ -3,11 +3,10 @@
 import 'dart:developer';
 import 'package:doan_ltmobi/dpHelper/constant.dart';
 import 'package:mongo_dart/mongo_dart.dart';
-import 'package:intl/intl.dart'; // Import để format số
-import 'package:random_string/random_string.dart'; // Import để tạo mã ngẫu nhiên
+import 'package:intl/intl.dart';
+import 'package:random_string/random_string.dart';
 
 class MongoDatabase {
-  // Dùng 'late' để đảm bảo không cần thay đổi ở các file khác
   static late Db db;
   static late DbCollection userCollection;
   static late DbCollection bannerCollection;
@@ -18,7 +17,7 @@ class MongoDatabase {
   static late DbCollection voucherCollection;
   static late DbCollection reviewCollection;
   static late DbCollection customOrderCollection;
-  static late DbCollection pointHistoryCollection; // <-- Chức năng mới
+  static late DbCollection pointHistoryCollection;
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -33,32 +32,63 @@ class MongoDatabase {
     voucherCollection = db.collection("vouchers");
     reviewCollection = db.collection("reviews");
     customOrderCollection = db.collection("custom_orders");
-    pointHistoryCollection = db.collection("point_history"); // <-- Chức năng mới
+    pointHistoryCollection = db.collection("point_history");
   }
 
-  // Sửa hàm insertUser để thêm điểm ban đầu
   static Future<void> insertUser(String email, String password) async {
     try {
       await userCollection.insertOne({
         'email': email,
         'password': password,
-        'loyaltyPoints': 0, // <-- Thêm điểm ban đầu cho người dùng mới
+        'loyaltyPoints': 0,
       });
     } catch (e) {
       print("Lỗi khi thêm người dùng: $e");
     }
   }
 
-  // --- HÀM MỚI CHO TÍNH NĂNG TÍCH ĐIỂM & ĐỔI ĐIỂM ---
+  static Future<double> getUserTotalSpending(ObjectId userId) async {
+    try {
+      final pipeline = [
+        {
+          '\$match': {
+            'userId': userId,
+            'status': 'Delivered'
+          }
+        },
+        {
+          '\$group': {
+            '_id': '\$userId',
+            'totalSpending': {'\$sum': '\$totalPrice'}
+          }
+        }
+      ];
+      final result = await orderCollection.aggregateToStream(pipeline).toList();
+      if (result.isNotEmpty && result.first['totalSpending'] != null) {
+        return (result.first['totalSpending'] as num).toDouble();
+      }
+      return 0.0;
+    } catch (e) {
+      print("Lỗi khi tính tổng chi tiêu: $e");
+      return 0.0;
+    }
+  }
 
-  /// Cộng điểm cho người dùng sau khi đơn hàng hoàn thành
+  static Map<String, dynamic> getMembershipLevel(double totalSpending) {
+    if (totalSpending >= 5000000) {
+      return {'level': 'Vàng', 'discountPercent': 10};
+    } else if (totalSpending >= 3000000) {
+      return {'level': 'Bạc', 'discountPercent': 5};
+    } else {
+      return {'level': 'Đồng', 'discountPercent': 0};
+    }
+  }
+
   static Future<void> addPointsForOrder(Map<String, dynamic> order) async {
     try {
       final userId = order['userId'] as ObjectId;
       final orderId = order['_id'] as ObjectId;
       final totalPrice = (order['totalPrice'] as num).toDouble();
-
-      // Quy tắc mới: 1,000 VNĐ = 1 điểm
       final pointsEarned = (totalPrice / 1000).floor();
 
       if (pointsEarned > 0) {
@@ -80,7 +110,6 @@ class MongoDatabase {
     }
   }
 
-  /// Đổi điểm lấy voucher
   static Future<Map<String, dynamic>> redeemPointsForVoucher({
     required ObjectId userId,
     required int pointsToRedeem,
@@ -92,13 +121,11 @@ class MongoDatabase {
         return {'success': false, 'message': 'Bạn không đủ điểm để đổi vật phẩm này.'};
       }
 
-      // Trừ điểm
       await userCollection.updateOne(
         where.id(userId),
         modify.inc('loyaltyPoints', -pointsToRedeem)
       );
 
-      // Ghi lịch sử
       await pointHistoryCollection.insertOne({
         'userId': userId,
         'points': -pointsToRedeem,
@@ -107,7 +134,6 @@ class MongoDatabase {
         'date': DateTime.now(),
       });
 
-      // Tạo voucher mới
       final voucherCode = 'REDEEM-${randomAlphaNumeric(8).toUpperCase()}';
       await voucherCollection.insertOne({
         'code': voucherCode,
@@ -119,14 +145,12 @@ class MongoDatabase {
       });
       
       return {'success': true, 'message': 'Đổi điểm thành công! Mã voucher của bạn là: $voucherCode'};
-
     } catch (e) {
       print("Lỗi khi đổi điểm: $e");
       return {'success': false, 'message': 'Đã xảy ra lỗi, vui lòng thử lại.'};
     }
   }
 
-  /// Lấy lịch sử điểm của người dùng
   static Future<List<Map<String, dynamic>>> getPointHistory(ObjectId userId) async {
     try {
       return await pointHistoryCollection.find(
@@ -137,9 +161,6 @@ class MongoDatabase {
       return [];
     }
   }
-
-
-  // --- Các hàm hiện có ---
 
   static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
     try {
@@ -371,16 +392,13 @@ class MongoDatabase {
       final user = await userCollection.findOne(
         where.id(userId).eq('password', oldPassword),
       );
-
       if (user == null) {
         return false;
       }
-
       await userCollection.updateOne(
         where.id(userId),
         modify.set('password', newPassword),
       );
-      
       return true;
     } catch (e) {
       print('Lỗi khi đổi mật khẩu: $e');
@@ -424,9 +442,7 @@ class MongoDatabase {
         {'\$match': {'status': 'Delivered'}},
         {'\$group': {'_id': null, 'totalRevenue': {'\$sum': '\$totalPrice'}}}
       ];
-      
       final result = await orderCollection.aggregateToStream(pipeline).toList();
-      
       if (result.isNotEmpty && result.first['totalRevenue'] != null) {
         return (result.first['totalRevenue'] as num).toDouble();
       }
@@ -442,23 +458,19 @@ class MongoDatabase {
       final pipeline = [
         {'\$group': {'_id': '\$status', 'count': {'\$sum': 1}}}
       ];
-      
       final result = await orderCollection.aggregateToStream(pipeline).toList();
-      
       final Map<String, int> statusCounts = {
         'Pending': 0,
         'Shipping': 0,
         'Delivered': 0,
         'Cancelled': 0,
       };
-
       for (var doc in result) {
         if (doc['_id'] != null && statusCounts.containsKey(doc['_id'])) {
           statusCounts[doc['_id']] = doc['count'];
         }
       }
       return statusCounts;
-
     } catch (e) {
       print('Lỗi khi lấy số lượng đơn hàng theo trạng thái: $e');
       return {};

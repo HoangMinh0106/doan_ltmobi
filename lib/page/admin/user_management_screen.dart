@@ -1,3 +1,5 @@
+// lib/page/admin/user_management_screen.dart
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -14,7 +16,30 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
-  /* ---------------- XÓA USER (đã có) ---------------- */
+  late Future<List<Map<String, dynamic>>> _usersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _usersFuture = _fetchUsersWithMembership();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchUsersWithMembership() async {
+    final users = await MongoDatabase.userCollection.find().toList();
+    await Future.wait(users.map((user) async {
+      final totalSpending = await MongoDatabase.getUserTotalSpending(user['_id']);
+      final membership = MongoDatabase.getMembershipLevel(totalSpending);
+      user['membershipLevel'] = membership['level'];
+    }));
+    return users;
+  }
+
+  void _refreshUserList() {
+    setState(() {
+      _usersFuture = _fetchUsersWithMembership();
+    });
+  }
+
   Future<void> _deleteUser(M.ObjectId userId) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -31,17 +56,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       await MongoDatabase.userCollection.remove(M.where.id(userId));
       if (mounted) {
         ElegantNotification.success(title: const Text('Thành công'), description: const Text('Đã xóa người dùng.')).show(context);
-        setState(() {});
+        _refreshUserList();
       }
     }
   }
 
-  /* ------------- 🔥 NEW: THÊM VÀ CHỈNH SỬA USER ------------- */
   Future<void> _addOrEditUser({Map<String, dynamic>? user}) async {
     final bool isEditMode = user != null;
     final emailC = TextEditingController(text: isEditMode ? user['email'] : '');
     final phoneC = TextEditingController(text: isEditMode ? user['phone'] : '');
-    // Thêm controller cho mật khẩu, chỉ yêu cầu khi thêm mới
     final passwordC = TextEditingController();
     String gender = isEditMode ? (user['gender'] ?? 'Nam') : 'Nam';
 
@@ -56,7 +79,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(controller: emailC, decoration: const InputDecoration(labelText: 'Email')),
-                  // Chỉ hiển thị trường mật khẩu khi thêm mới
                   if (!isEditMode)
                     TextField(controller: passwordC, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu')),
                   TextField(controller: phoneC, decoration: const InputDecoration(labelText: 'Số điện thoại')),
@@ -74,10 +96,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
               ElevatedButton(
                 onPressed: () {
-                  // Kiểm tra trường bắt buộc khi thêm mới
                   if (!isEditMode && (emailC.text.isEmpty || passwordC.text.isEmpty)) {
-                     ElegantNotification.error(title: const Text('Lỗi'), description: const Text('Email và mật khẩu là bắt buộc.')).show(context);
-                     return;
+                    ElegantNotification.error(title: const Text('Lỗi'), description: const Text('Email và mật khẩu là bắt buộc.')).show(context);
+                    return;
                   }
                   Navigator.pop(ctx, true);
                 },
@@ -92,7 +113,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     if (saved == true) {
       if (isEditMode) {
-        // Chế độ chỉnh sửa
         await MongoDatabase.userCollection.updateOne(
           M.where.id(user['_id']),
           M.modify
@@ -101,43 +121,38 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ..set('gender', gender),
         );
       } else {
-        // Chế độ thêm mới
         await MongoDatabase.userCollection.insertOne({
           '_id': M.ObjectId(),
           'email': emailC.text.trim(),
-          'password': passwordC.text.trim(), // Lưu ý: nên mã hóa mật khẩu trong ứng dụng thực tế
+          'password': passwordC.text.trim(),
           'phone': phoneC.text.trim(),
           'gender': gender,
-          'profile_image_base64': '', // Giá trị mặc định
+          'loyaltyPoints': 0,
+          'profile_image_base64': '',
         });
       }
-
       if (mounted) {
         ElegantNotification.success(
           title: const Text('Thành công'),
           description: Text(isEditMode ? 'Đã cập nhật thông tin.' : 'Đã thêm người dùng mới.'),
         ).show(context);
-        setState(() {});
+        _refreshUserList();
       }
     }
   }
 
-  /* -------------------- UI LIST -------------------- */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Quản lý người dùng'), backgroundColor: Colors.redAccent),
-      // *** BẮT ĐẦU THAY ĐỔI ***
-      // Thêm nút Floating Action Button để thêm người dùng
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _addOrEditUser(), // Gọi hàm ở chế độ "thêm mới"
+        onPressed: () => _addOrEditUser(),
         backgroundColor: Colors.redAccent,
         tooltip: 'Thêm người dùng mới',
         child: const Icon(Icons.add),
       ),
-      // *** KẾT THÚC THAY ĐỔI ***
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: MongoDatabase.userCollection.find().toList(),
+        future: _usersFuture,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
@@ -155,6 +170,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 } catch (_) {}
               }
 
+              final membershipLevel = u['membershipLevel'] ?? 'Đồng';
+              Color levelColor;
+              switch (membershipLevel) {
+                case 'Vàng':
+                  levelColor = Colors.amber.shade700;
+                  break;
+                case 'Bạc':
+                  levelColor = Colors.blueGrey.shade400;
+                  break;
+                default:
+                  levelColor = Colors.brown.shade300;
+              }
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 child: ListTile(
@@ -166,14 +194,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      /* nút sửa */
+                      Chip(
+                        label: Text(membershipLevel, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        backgroundColor: levelColor,
+                        padding: EdgeInsets.zero,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
-                        // *** BẮT ĐẦU THAY ĐỔI ***
-                        onPressed: () => _addOrEditUser(user: u), // Gọi hàm ở chế độ "chỉnh sửa"
-                        // *** KẾT THÚC THAY ĐỔI ***
+                        onPressed: () => _addOrEditUser(user: u),
                       ),
-                      /* nút xóa */
                       IconButton(
                         icon: const Icon(Icons.delete_outline, color: Colors.red),
                         onPressed: () => _deleteUser(u['_id']),
