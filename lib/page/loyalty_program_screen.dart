@@ -66,8 +66,8 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
               child: const Text('Hủy')),
           TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Đổi',
-                  style: TextStyle(color: primaryLoyaltyColor))),
+              child:
+                  const Text('Đổi', style: TextStyle(color: primaryLoyaltyColor))),
         ],
       ),
     );
@@ -184,20 +184,17 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
             ),
           ),
           
-          // SỬA ĐỔI: Sử dụng widget mới cho mục đổi thưởng
           _buildRedeemOption(
             points: 500,
             voucherValue: 50000,
             icon: Icons.card_giftcard,
             currentPoints: currentPoints,
-            gradientColors: [Colors.red.shade400, Colors.pink.shade400],
           ),
           _buildRedeemOption(
             points: 1000,
             voucherValue: 120000,
             icon: Icons.confirmation_number,
             currentPoints: currentPoints,
-            gradientColors: [Colors.purple.shade400, Colors.deepPurple.shade400],
           ),
           
           const Padding(
@@ -254,28 +251,32 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
     );
   }
 
-  // SỬA ĐỔI: Widget đổi thưởng được thiết kế lại hoàn toàn
+  // SỬA ĐỔI: Widget đổi thưởng được thiết kế lại để có màu đồng nhất
   Widget _buildRedeemOption({
     required int points,
     required double voucherValue,
     required IconData icon,
     required int currentPoints,
-    required List<Color> gradientColors,
   }) {
     bool canRedeem = currentPoints >= points;
+    
+    // Dải màu gradient đồng nhất cho các thẻ có thể đổi
+    final List<Color> activeGradient = [const Color(0xFFF06292), const Color(0xFFD81B60)];
+    final List<Color> disabledGradient = [Colors.grey.shade400, Colors.grey.shade500];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: canRedeem ? gradientColors : [Colors.grey.shade400, Colors.grey.shade500],
+            colors: canRedeem ? activeGradient : disabledGradient,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(15),
           boxShadow: canRedeem ? [
             BoxShadow(
-              color: gradientColors.last.withOpacity(0.4),
+              color: primaryLoyaltyColor.withOpacity(0.4),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

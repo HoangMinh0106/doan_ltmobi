@@ -69,7 +69,8 @@ class _HomePageBodyState extends State<HomePageBody> {
     });
     _fetchFavorites();
   }
-
+  
+  // KHÔI PHỤC: Các hàm logic đã bị thiếu
   Future<void> _fetchFavorites() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     _favoriteProductIds = await MongoDatabase.getUserFavorites(userId);
@@ -135,7 +136,7 @@ class _HomePageBodyState extends State<HomePageBody> {
         content: Text("Đã thêm '${product['name']}' vào giỏ hàng!"),
         backgroundColor: Colors.green));
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,17 +211,13 @@ class _HomePageBodyState extends State<HomePageBody> {
       ),
     );
   }
-  
-  // SỬA ĐỔI: Cập nhật màu sắc và kích thước
+
   Widget _buildFeaturedActionsSection() {
     final int points = widget.userDocument['loyaltyPoints'] ?? 0;
     
-    const Color cakeCardColor = Color(0xFFE91E63);
-    final Color cakeCardBackgroundColor = Colors.pink.shade50;
-
-    // MỚI: Màu Tím Chàm (Deep Purple) cho thẻ điểm
-    const Color pointsCardColor = Color(0xFF4527A0); 
-    final Color pointsCardBackgroundColor = Colors.deepPurple.shade50;
+    // Thống nhất màu sắc
+    const Color primaryCardColor = Color(0xFFE91E63);
+    final Color cardBackgroundColor = Colors.pink.shade50;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -231,22 +228,22 @@ class _HomePageBodyState extends State<HomePageBody> {
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomCakeOrderScreen())),
               child: Container(
                 padding: const EdgeInsets.all(16),
-                height: 160, // Tăng chiều cao
+                height: 160,
                 decoration: BoxDecoration(
-                  color: cakeCardBackgroundColor,
+                  color: cardBackgroundColor,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.cake_outlined, color: cakeCardColor, size: 42), // Icon lớn hơn
+                    Icon(Icons.cake_outlined, color: primaryCardColor, size: 42),
                     Text(
                       "Thiết kế bánh riêng", 
                       style: TextStyle(
                         fontWeight: FontWeight.bold, 
                         fontSize: 16, 
-                        color: cakeCardColor
+                        color: primaryCardColor
                       )
                     ),
                   ],
@@ -260,9 +257,9 @@ class _HomePageBodyState extends State<HomePageBody> {
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => LoyaltyProgramScreen(userDocument: widget.userDocument))),
               child: Container(
                 padding: const EdgeInsets.all(16),
-                height: 160, // Tăng chiều cao
+                height: 160,
                 decoration: BoxDecoration(
-                  color: pointsCardBackgroundColor,
+                  color: cardBackgroundColor, 
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
@@ -271,8 +268,8 @@ class _HomePageBodyState extends State<HomePageBody> {
                   children: [
                     const Icon(
                       Icons.stars_rounded,
-                      color: pointsCardColor,
-                      size: 42 // Icon lớn hơn
+                      color: primaryCardColor, 
+                      size: 42
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +279,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                           style: const TextStyle(
                             fontWeight: FontWeight.bold, 
                             fontSize: 24, 
-                            color: pointsCardColor
+                            color: primaryCardColor
                           ),
                         ),
                         const Text("Điểm của bạn", style: TextStyle(color: Colors.black54)),
@@ -298,13 +295,12 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
-  // SỬA ĐỔI: Tăng kích thước avatar
   Widget _buildHeader() => Row(children: [
-        _buildProfileAvatar(), // Hàm này đã được sửa đổi
+        _buildProfileAvatar(),
         const SizedBox(width: 12),
         Expanded(
           child: InkWell(
-            onTap: _chooseLocation,
+            onTap: _chooseLocation, // KHÔI PHỤC
             borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -341,7 +337,6 @@ class _HomePageBodyState extends State<HomePageBody> {
         ),
       ]);
       
-  // SỬA ĐỔI: Tăng kích thước avatar trong hàm này
   Widget _buildProfileAvatar() {
     ImageProvider image;
     if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
@@ -355,12 +350,11 @@ class _HomePageBodyState extends State<HomePageBody> {
       image = const AssetImage("assets/image/default-avatar.png");
     }
     return CircleAvatar(
-      radius: 28, // Kích thước avatar lớn hơn
+      radius: 28,
       backgroundImage: image
     );
   }
 
-  // ... (Các hàm còn lại giữ nguyên không đổi)
   Widget _buildSearchBar() => TextField(
         controller: _searchController,
         onSubmitted: widget.onSearchSubmitted,
@@ -580,7 +574,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                         InkWell(
-                            onTap: () => _handleAddToCart(product),
+                            onTap: () => _handleAddToCart(product), // KHÔI PHỤC
                             borderRadius: BorderRadius.circular(20),
                             child: Container(
                               padding: const EdgeInsets.all(6),
