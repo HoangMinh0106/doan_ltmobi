@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
+import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart' as m;
 
 class LoyaltyProgramScreen extends StatefulWidget {
@@ -19,8 +19,8 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
   late Map<String, dynamic> _currentUserDocument;
   bool _isLoading = false;
 
-  // Màu chủ đạo cho trang này, đồng bộ với thẻ
-  static const Color primaryLoyaltyColor = Color(0xFFAD1457);
+  static const Color primaryLoyaltyColor = Color(0xFFE91E63);
+  static const Color lightPinkBackground = Color(0xFFFCE4EC);
 
   @override
   void initState() {
@@ -33,22 +33,23 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
       _isLoading = true;
     });
 
-    final updatedUser = await MongoDatabase.userCollection.findOne(m.where.id(_currentUserDocument['_id']));
-    
-    if (updatedUser != null && mounted) {
+    final updatedUser = await MongoDatabase.userCollection
+        .findOne(m.where.id(_currentUserDocument['_id']));
+
+    if (mounted) {
+      if (updatedUser != null) {
+        setState(() {
+          _currentUserDocument = updatedUser;
+        });
+      }
       setState(() {
-        _currentUserDocument = updatedUser;
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật điểm của bạn!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Đã cập nhật điểm của bạn!'),
+            backgroundColor: Colors.green),
       );
-    } else {
-       if(mounted){
-         setState(() {
-            _isLoading = false;
-         });
-       }
     }
   }
 
@@ -57,10 +58,16 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận đổi điểm'),
-        content: Text('Bạn có chắc chắn muốn dùng $pointsToRedeem điểm để đổi lấy voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ không?'),
+        content: Text(
+            'Bạn có chắc chắn muốn dùng $pointsToRedeem điểm để đổi lấy voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ không?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Hủy')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Đổi', style: TextStyle(color: primaryLoyaltyColor))),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Hủy')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Đổi',
+                  style: TextStyle(color: primaryLoyaltyColor))),
         ],
       ),
     );
@@ -73,33 +80,36 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
       voucherValue: voucherValue,
     );
 
-    if (mounted) {
-      await _refreshData();
+    await _refreshData();
 
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(result['success'] == true ? 'Thành công' : 'Thất bại'),
-          content: Text(result['message']),
-          actions: [
-            if (result['success'] == true)
-              TextButton(
-                onPressed: () {
-                  final message = result['message'] as String;
-                  final voucherCode = message.substring(message.lastIndexOf(':') + 2);
-                  Clipboard.setData(ClipboardData(text: voucherCode));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã sao chép mã voucher!')));
-                },
-                child: const Text('Sao chép mã', style: TextStyle(color: primaryLoyaltyColor)),
-              ),
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(result['success'] == true ? 'Thành công' : 'Thất bại'),
+        content: Text(result['message']),
+        actions: [
+          if (result['success'] == true)
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK', style: TextStyle(color: primaryLoyaltyColor)),
+              onPressed: () {
+                final message = result['message'] as String;
+                final voucherCode =
+                    message.substring(message.lastIndexOf(':') + 2);
+                Clipboard.setData(ClipboardData(text: voucherCode));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đã sao chép mã voucher!')));
+              },
+              child: const Text('Sao chép mã',
+                  style: TextStyle(color: primaryLoyaltyColor)),
             ),
-          ],
-        ),
-      );
-    }
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK', style: TextStyle(color: primaryLoyaltyColor)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -107,9 +117,10 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
     final int currentPoints = _currentUserDocument['loyaltyPoints'] ?? 0;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Khách hàng thân thiết'),
-        backgroundColor: primaryLoyaltyColor, // Đổi màu AppBar
+        backgroundColor: primaryLoyaltyColor,
         actions: [
           _isLoading
               ? const Padding(
@@ -117,7 +128,8 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
                   child: SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3)),
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 3)),
                 )
               : IconButton(
                   icon: const Icon(Icons.refresh),
@@ -132,11 +144,11 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 30),
-            decoration: BoxDecoration(
-              color: Colors.pink.shade50, // Đổi màu nền cho khu vực điểm
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
+            decoration: const BoxDecoration(
+              color: lightPinkBackground,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(35),
+                bottomRight: Radius.circular(35),
               ),
             ),
             child: Column(
@@ -148,7 +160,10 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
                 const SizedBox(height: 10),
                 Text(
                   NumberFormat('#,##0').format(currentPoints),
-                  style: const TextStyle(color: primaryLoyaltyColor, fontSize: 48, fontWeight: FontWeight.bold), // Đổi màu chữ điểm
+                  style: const TextStyle(
+                      color: primaryLoyaltyColor,
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -158,29 +173,33 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
               ],
             ),
           ),
-          
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
             child: Text(
               'Đổi thưởng',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
+          
+          // SỬA ĐỔI: Sử dụng widget mới cho mục đổi thưởng
           _buildRedeemOption(
             points: 500,
             voucherValue: 50000,
             icon: Icons.card_giftcard,
-            color: primaryLoyaltyColor,
             currentPoints: currentPoints,
+            gradientColors: [Colors.red.shade400, Colors.pink.shade400],
           ),
           _buildRedeemOption(
             points: 1000,
             voucherValue: 120000,
             icon: Icons.confirmation_number,
-            color: primaryLoyaltyColor,
             currentPoints: currentPoints,
+            gradientColors: [Colors.purple.shade400, Colors.deepPurple.shade400],
           ),
-
+          
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
             child: Text(
@@ -193,10 +212,13 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
               future: MongoDatabase.getPointHistory(_currentUserDocument['_id']),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: primaryLoyaltyColor));
+                  return const Center(
+                      child:
+                          CircularProgressIndicator(color: primaryLoyaltyColor));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('Bạn chưa có lịch sử tích điểm.'));
+                  return const Center(
+                      child: Text('Bạn chưa có lịch sử tích điểm.'));
                 }
                 var history = snapshot.data!;
                 return ListView.builder(
@@ -211,7 +233,8 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
                         color: isEarned ? Colors.green : Colors.red,
                       ),
                       title: Text(item['description']),
-                      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format((item['date'] as DateTime).toLocal())),
+                      subtitle: Text(DateFormat('dd/MM/yyyy HH:mm')
+                          .format((item['date'] as DateTime).toLocal())),
                       trailing: Text(
                         '${isEarned ? '+' : ''}${item['points']}',
                         style: TextStyle(
@@ -231,27 +254,73 @@ class _LoyaltyProgramScreenState extends State<LoyaltyProgramScreen> {
     );
   }
 
+  // SỬA ĐỔI: Widget đổi thưởng được thiết kế lại hoàn toàn
   Widget _buildRedeemOption({
     required int points,
     required double voucherValue,
     required IconData icon,
-    required Color color,
-    required int currentPoints
+    required int currentPoints,
+    required List<Color> gradientColors,
   }) {
     bool canRedeem = currentPoints >= points;
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: ListTile(
-        leading: Icon(icon, color: color, size: 30),
-        title: Text('Voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ', style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Dùng ${NumberFormat('#,##0').format(points)} điểm'),
-        trailing: ElevatedButton(
-          onPressed: canRedeem ? () => _handleRedeem(points, voucherValue) : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: color,
-            disabledBackgroundColor: Colors.grey.shade300,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: canRedeem ? gradientColors : [Colors.grey.shade400, Colors.grey.shade500],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          child: const Text('Đổi'),
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: canRedeem ? [
+            BoxShadow(
+              color: gradientColors.last.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ] : [],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: canRedeem ? () => _handleRedeem(points, voucherValue) : null,
+            borderRadius: BorderRadius.circular(15),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Icon(icon, color: Colors.white, size: 36),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Dùng ${NumberFormat('#,##0').format(points)} điểm',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (canRedeem)
+                    const Icon(Icons.arrow_forward_ios, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

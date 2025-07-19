@@ -27,7 +27,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Future<List<Map<String, dynamic>>> _fetchUsersWithMembership() async {
     final users = await MongoDatabase.userCollection.find().toList();
     await Future.wait(users.map((user) async {
-      final totalSpending = await MongoDatabase.getUserTotalSpending(user['_id']);
+      final totalSpending =
+          await MongoDatabase.getUserTotalSpending(user['_id']);
       final membership = MongoDatabase.getMembershipLevel(totalSpending);
       user['membershipLevel'] = membership['level'];
     }));
@@ -47,15 +48,22 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         title: const Text('Xác nhận xóa'),
         content: const Text('Bạn có chắc chắn muốn xóa người dùng này không?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Xóa', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
     if (confirm == true) {
       await MongoDatabase.userCollection.remove(M.where.id(userId));
       if (mounted) {
-        ElegantNotification.success(title: const Text('Thành công'), description: const Text('Đã xóa người dùng.')).show(context);
+        ElegantNotification.success(
+                title: const Text('Thành công'),
+                description: const Text('Đã xóa người dùng.'))
+            .show(context);
         _refreshUserList();
       }
     }
@@ -73,36 +81,56 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSt) => AlertDialog(
-            title: Text(isEditMode ? 'Chỉnh sửa thông tin' : 'Thêm người dùng mới'),
+            title: Text(
+                isEditMode ? 'Chỉnh sửa thông tin' : 'Thêm người dùng mới'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: emailC, decoration: const InputDecoration(labelText: 'Email')),
+                  TextField(
+                      controller: emailC,
+                      decoration: const InputDecoration(labelText: 'Email')),
                   if (!isEditMode)
-                    TextField(controller: passwordC, obscureText: true, decoration: const InputDecoration(labelText: 'Mật khẩu')),
-                  TextField(controller: phoneC, decoration: const InputDecoration(labelText: 'Số điện thoại')),
+                    TextField(
+                        controller: passwordC,
+                        obscureText: true,
+                        decoration:
+                            const InputDecoration(labelText: 'Mật khẩu')),
+                  TextField(
+                      controller: phoneC,
+                      decoration:
+                          const InputDecoration(labelText: 'Số điện thoại')),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: gender,
                     decoration: const InputDecoration(labelText: 'Giới tính'),
-                    items: const ['Nam', 'Nữ', 'Khác'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    items: const ['Nam', 'Nữ', 'Khác']
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
                     onChanged: (v) => setSt(() => gender = v!),
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Hủy')),
               ElevatedButton(
                 onPressed: () {
-                  if (!isEditMode && (emailC.text.isEmpty || passwordC.text.isEmpty)) {
-                    ElegantNotification.error(title: const Text('Lỗi'), description: const Text('Email và mật khẩu là bắt buộc.')).show(context);
+                  if (!isEditMode &&
+                      (emailC.text.isEmpty || passwordC.text.isEmpty)) {
+                    ElegantNotification.error(
+                            title: const Text('Lỗi'),
+                            description:
+                                const Text('Email và mật khẩu là bắt buộc.'))
+                        .show(context);
                     return;
                   }
                   Navigator.pop(ctx, true);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent),
                 child: Text(isEditMode ? 'Lưu' : 'Thêm'),
               ),
             ],
@@ -134,7 +162,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       if (mounted) {
         ElegantNotification.success(
           title: const Text('Thành công'),
-          description: Text(isEditMode ? 'Đã cập nhật thông tin.' : 'Đã thêm người dùng mới.'),
+          description: Text(isEditMode
+              ? 'Đã cập nhật thông tin.'
+              : 'Đã thêm người dùng mới.'),
         ).show(context);
         _refreshUserList();
       }
@@ -144,7 +174,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Quản lý người dùng'), backgroundColor: Colors.redAccent),
+      appBar: AppBar(
+          title: const Text('Quản lý người dùng'),
+          backgroundColor: Colors.redAccent),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditUser(),
         backgroundColor: Colors.redAccent,
@@ -154,9 +186,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _usersFuture,
         builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
           if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
-          if (!snap.hasData || snap.data!.isEmpty) return const Center(child: Text('Không có người dùng nào.'));
+          if (!snap.hasData || snap.data!.isEmpty) {
+            return const Center(child: Text('Không có người dùng nào.'));
+          }
 
           final users = snap.data!;
           return ListView.builder(
@@ -164,7 +200,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             itemBuilder: (ctx, i) {
               final u = users[i];
               Uint8List? avatarBytes;
-              if (u['profile_image_base64'] != null && (u['profile_image_base64'] as String).isNotEmpty) {
+              if (u['profile_image_base64'] != null &&
+                  (u['profile_image_base64'] as String).isNotEmpty) {
                 try {
                   avatarBytes = base64Decode(u['profile_image_base64']);
                 } catch (_) {}
@@ -173,6 +210,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               final membershipLevel = u['membershipLevel'] ?? 'Đồng';
               Color levelColor;
               switch (membershipLevel) {
+                case 'Kim Cương':
+                  levelColor = Colors.purple;
+                  break;
+                case 'Bạch Kim':
+                  levelColor = Colors.teal;
+                  break;
                 case 'Vàng':
                   levelColor = Colors.amber.shade700;
                   break;
@@ -184,22 +227,29 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               }
 
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 child: ListTile(
                   leading: avatarBytes != null
                       ? CircleAvatar(backgroundImage: MemoryImage(avatarBytes))
                       : const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(u['email'] ?? 'Không có email', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(u['email'] ?? 'Không có email',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(u['phone'] ?? 'Không có SĐT'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Chip(
-                        label: Text(membershipLevel, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        label: Text(membershipLevel,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold)),
                         backgroundColor: levelColor,
                         padding: EdgeInsets.zero,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        labelPadding:
+                            const EdgeInsets.symmetric(horizontal: 8),
                         visualDensity: VisualDensity.compact,
                       ),
                       const SizedBox(width: 8),
@@ -208,7 +258,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         onPressed: () => _addOrEditUser(user: u),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(Icons.delete_outline,
+                            color: Colors.red),
                         onPressed: () => _deleteUser(u['_id']),
                       ),
                     ],
