@@ -18,6 +18,7 @@ class MongoDatabase {
   static late DbCollection reviewCollection;
   static late DbCollection customOrderCollection;
   static late DbCollection pointHistoryCollection;
+  static late DbCollection notificationCollection; // <-- Bổ sung lại
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -33,7 +34,78 @@ class MongoDatabase {
     reviewCollection = db.collection("reviews");
     customOrderCollection = db.collection("custom_orders");
     pointHistoryCollection = db.collection("point_history");
+    notificationCollection = db.collection("notifications"); // <-- Bổ sung lại
   }
+
+  // --- HÀM CHO CHỨC NĂNG THÔNG BÁO (BỔ SUNG LẠI) ---
+
+  static Future<void> createNotification({
+    required ObjectId userId,
+    required String title,
+    required String body,
+    String type = 'general',
+    Map<String, dynamic> data = const {},
+  }) async {
+    try {
+      await notificationCollection.insertOne({
+        'userId': userId,
+        'title': title,
+        'body': body,
+        'type': type,
+        'data': data,
+        'isRead': false,
+        'createdAt': DateTime.now(),
+      });
+    } catch (e) {
+      print("Lỗi khi tạo thông báo: $e");
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getNotificationsForUser(ObjectId userId) async {
+    try {
+      return await notificationCollection.find(
+        where.eq('userId', userId).sortBy('createdAt', descending: true)
+      ).toList();
+    } catch (e) {
+      print("Lỗi khi lấy thông báo: $e");
+      return [];
+    }
+  }
+  
+  static Future<int> getUnreadNotificationCount(ObjectId userId) async {
+    try {
+      return await notificationCollection.count(
+        where.eq('userId', userId).eq('isRead', false)
+      );
+    } catch (e) {
+      print("Lỗi khi đếm thông báo chưa đọc: $e");
+      return 0;
+    }
+  }
+
+  static Future<void> markAsRead(ObjectId notificationId) async {
+    try {
+      await notificationCollection.updateOne(
+        where.id(notificationId),
+        modify.set('isRead', true)
+      );
+    } catch (e) {
+      print("Lỗi khi đánh dấu đã đọc: $e");
+    }
+  }
+  
+  static Future<void> markAllAsRead(ObjectId userId) async {
+    try {
+      await notificationCollection.updateMany(
+        where.eq('userId', userId).eq('isRead', false),
+        modify.set('isRead', true)
+      );
+    } catch (e) {
+      print("Lỗi khi đánh dấu tất cả đã đọc: $e");
+    }
+  }
+
+  // --- CÁC HÀM CŨ ---
 
   static Future<void> insertUser(String email, String password) async {
     try {
@@ -47,16 +119,15 @@ class MongoDatabase {
     }
   }
 
-  // Cập nhật hàm getMembershipLevel với các hạng mới
   static Map<String, dynamic> getMembershipLevel(double totalSpending) {
     if (totalSpending >= 30000000) {
-      return {'level': 'Kim Cương', 'discountPercent': 20}; // 30 triệu
+      return {'level': 'Kim Cương', 'discountPercent': 20};
     } else if (totalSpending >= 15000000) {
-      return {'level': 'Bạch Kim', 'discountPercent': 15}; // 15 triệu
+      return {'level': 'Bạch Kim', 'discountPercent': 15};
     } else if (totalSpending >= 5000000) {
-      return {'level': 'Vàng', 'discountPercent': 10}; // 5 triệu
+      return {'level': 'Vàng', 'discountPercent': 10};
     } else if (totalSpending >= 3000000) {
-      return {'level': 'Bạc', 'discountPercent': 5}; // 3 triệu
+      return {'level': 'Bạc', 'discountPercent': 5};
     } else {
       return {'level': 'Đồng', 'discountPercent': 0};
     }
@@ -94,15 +165,13 @@ class MongoDatabase {
       final pointsEarned = (totalPrice / 1000).floor();
 
       if (pointsEarned > 0) {
-        await userCollection
-            .updateOne(where.id(userId), modify.inc('loyaltyPoints', pointsEarned));
+        await userCollection.updateOne(where.id(userId), modify.inc('loyaltyPoints', pointsEarned));
         await pointHistoryCollection.insertOne({
           'userId': userId,
           'orderId': orderId,
           'points': pointsEarned,
           'type': 'earned',
-          'description':
-              'Tích điểm từ đơn hàng #${orderId.toHexString().substring(0, 6)}',
+          'description': 'Tích điểm từ đơn hàng #${orderId.toHexString().substring(0, 6)}',
           'date': DateTime.now(),
         });
       }
@@ -119,21 +188,16 @@ class MongoDatabase {
     try {
       final user = await userCollection.findOne(where.id(userId));
       if (user == null || (user['loyaltyPoints'] ?? 0) < pointsToRedeem) {
-        return {
-          'success': false,
-          'message': 'Bạn không đủ điểm để đổi vật phẩm này.'
-        };
+        return {'success': false, 'message': 'Bạn không đủ điểm để đổi vật phẩm này.'};
       }
 
-      await userCollection.updateOne(
-          where.id(userId), modify.inc('loyaltyPoints', -pointsToRedeem));
+      await userCollection.updateOne(where.id(userId), modify.inc('loyaltyPoints', -pointsToRedeem));
 
       await pointHistoryCollection.insertOne({
         'userId': userId,
         'points': -pointsToRedeem,
         'type': 'spent',
-        'description':
-            'Đổi $pointsToRedeem điểm nhận voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ',
+        'description': 'Đổi $pointsToRedeem điểm nhận voucher ${NumberFormat('#,##0').format(voucherValue)} VNĐ',
         'date': DateTime.now(),
       });
 
@@ -146,45 +210,33 @@ class MongoDatabase {
         'isActive': true,
         'description': 'Voucher đổi từ $pointsToRedeem điểm',
       });
-
-      return {
-        'success': true,
-        'message': 'Đổi điểm thành công! Mã voucher của bạn là: $voucherCode'
-      };
+      
+      return {'success': true, 'message': 'Đổi điểm thành công! Mã voucher của bạn là: $voucherCode'};
     } catch (e) {
       print("Lỗi khi đổi điểm: $e");
       return {'success': false, 'message': 'Đã xảy ra lỗi, vui lòng thử lại.'};
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getPointHistory(
-      ObjectId userId) async {
+  static Future<List<Map<String, dynamic>>> getPointHistory(ObjectId userId) async {
     try {
-      return await pointHistoryCollection
-          .find(where.eq('userId', userId).sortBy('date', descending: true))
-          .toList();
+      return await pointHistoryCollection.find(where.eq('userId', userId).sortBy('date', descending: true)).toList();
     } catch (e) {
       print("Lỗi khi lấy lịch sử điểm: $e");
       return [];
     }
   }
 
-  static Future<void> createOrder(
-      ObjectId userId,
-      List<Map<String, dynamic>> cartItems,
-      double totalPrice,
-      String shippingAddress) async {
+  static Future<void> createOrder(ObjectId userId, List<Map<String, dynamic>> cartItems, double totalPrice, String shippingAddress) async {
     try {
-      final productsForOrder = cartItems
-          .map((item) => {
-                'productId': item['productId'],
-                'name': item['name'],
-                'price': item['price'],
-                'imageUrl': item['imageUrl'],
-                'quantity': item['quantity'],
-                'reviewed': false,
-              })
-          .toList();
+      final productsForOrder = cartItems.map((item) => {
+        'productId': item['productId'],
+        'name': item['name'],
+        'price': item['price'],
+        'imageUrl': item['imageUrl'],
+        'quantity': item['quantity'],
+        'reviewed': false,
+      }).toList();
 
       final orderDocument = {
         '_id': ObjectId(),
@@ -206,20 +258,16 @@ class MongoDatabase {
     try {
       await reviewCollection.insertOne(reviewData);
       final productId = reviewData['productId'] as ObjectId;
-      final reviews =
-          await reviewCollection.find(where.eq('productId', productId)).toList();
+      final reviews = await reviewCollection.find(where.eq('productId', productId)).toList();
       final totalReviews = reviews.length;
       double totalRating = 0;
       for (var review in reviews) {
         totalRating += (review['rating'] as num).toDouble();
       }
-      final averageRating =
-          totalReviews > 0 ? totalRating / totalReviews : 0;
+      final averageRating = totalReviews > 0 ? totalRating / totalReviews : 0;
       await productCollection.updateOne(
         where.id(productId),
-        modify
-            .set('rating', double.parse(averageRating.toStringAsFixed(1)))
-            .set('reviewCount', totalReviews),
+        modify.set('rating', double.parse(averageRating.toStringAsFixed(1))).set('reviewCount', totalReviews),
       );
     } catch (e) {
       print('Lỗi khi thêm đánh giá: $e');
@@ -227,74 +275,45 @@ class MongoDatabase {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getReviewsForProduct(
-      ObjectId productId) async {
+  static Future<List<Map<String, dynamic>>> getReviewsForProduct(ObjectId productId) async {
     try {
-      final reviews = await reviewCollection
-          .find(
-              where.eq('productId', productId).sortBy('createdAt', descending: true))
-          .toList();
-      return reviews;
+      return await reviewCollection.find(where.eq('productId', productId).sortBy('createdAt', descending: true)).toList();
     } catch (e) {
       print('Lỗi khi lấy đánh giá sản phẩm: $e');
       return [];
     }
   }
 
-  static Future<void> markProductAsReviewedInOrder(
-      ObjectId orderId, ObjectId productId) async {
+  static Future<void> markProductAsReviewedInOrder(ObjectId orderId, ObjectId productId) async {
     try {
-      await orderCollection.updateOne(
-          where.id(orderId).eq('products.productId', productId),
-          modify.set('products.\$.reviewed', true));
+      await orderCollection.updateOne(where.id(orderId).eq('products.productId', productId), modify.set('products.\$.reviewed', true));
     } catch (e) {
       print("Lỗi khi đánh dấu đã đánh giá: $e");
     }
   }
 
   static Future<List<Map<String, dynamic>>> getData() async {
-    final arrData = await userCollection.find().toList();
-    return arrData;
+    return await userCollection.find().toList();
   }
 
-  static Future<void> addToCart(
-      ObjectId userId, Map<String, dynamic> product,
-      {int quantity = 1}) async {
+  static Future<void> addToCart(ObjectId userId, Map<String, dynamic> product, {int quantity = 1}) async {
     try {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
       final productId = product['_id'];
       if (cart == null) {
         await cartCollection.insertOne({
           'userId': userId,
-          'items': [
-            {
-              'productId': productId,
-              'name': product['name'],
-              'price': product['price'],
-              'imageUrl': product['imageUrl'],
-              'description': product['description'],
-              'quantity': quantity
-            }
-          ]
+          'items': [{'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': quantity}]
         });
       } else {
         var items = List<Map<String, dynamic>>.from(cart['items']);
-        int existingItemIndex =
-            items.indexWhere((item) => item['productId'] == productId);
+        int existingItemIndex = items.indexWhere((item) => item['productId'] == productId);
         if (existingItemIndex != -1) {
           items[existingItemIndex]['quantity'] += quantity;
         } else {
-          items.add({
-            'productId': productId,
-            'name': product['name'],
-            'price': product['price'],
-            'imageUrl': product['imageUrl'],
-            'description': product['description'],
-            'quantity': quantity
-          });
+          items.add({'productId': productId, 'name': product['name'], 'price': product['price'], 'imageUrl': product['imageUrl'], 'description': product['description'], 'quantity': quantity});
         }
-        await cartCollection.update(
-            where.eq('userId', userId), modify.set('items', items));
+        await cartCollection.update(where.eq('userId', userId), modify.set('items', items));
       }
     } catch (e) {
       print("Lỗi khi thêm vào giỏ hàng: $e");
@@ -303,8 +322,7 @@ class MongoDatabase {
 
   static Future<Map<String, dynamic>?> getCart(ObjectId userId) async {
     try {
-      final cart = await cartCollection.findOne(where.eq('userId', userId));
-      return cart;
+      return await cartCollection.findOne(where.eq('userId', userId));
     } catch (e) {
       print("Lỗi khi lấy thông tin giỏ hàng: $e");
       return null;
@@ -316,8 +334,7 @@ class MongoDatabase {
       final cart = await cartCollection.findOne(where.eq('userId', userId));
       if (cart == null || cart['items'] == null) return 0;
       int totalQuantity = 0;
-      final items = List<Map<String, dynamic>>.from(cart['items']);
-      for (var item in items) {
+      for (var item in List<Map<String, dynamic>>.from(cart['items'])) {
         totalQuantity += (item['quantity'] as num?)?.toInt() ?? 0;
       }
       return totalQuantity;
@@ -327,22 +344,17 @@ class MongoDatabase {
     }
   }
 
-  static Future<void> updateItemQuantity(
-      ObjectId userId, ObjectId productId, int newQuantity) async {
+  static Future<void> updateItemQuantity(ObjectId userId, ObjectId productId, int newQuantity) async {
     try {
-      await cartCollection.update(
-          where.eq('userId', userId).eq('items.productId', productId),
-          modify.set('items.\$.quantity', newQuantity));
+      await cartCollection.update(where.eq('userId', userId).eq('items.productId', productId), modify.set('items.\$.quantity', newQuantity));
     } catch (e) {
       print("Lỗi khi cập nhật số lượng: $e");
     }
   }
 
-  static Future<void> removeItemFromCart(
-      ObjectId userId, ObjectId productId) async {
+  static Future<void> removeItemFromCart(ObjectId userId, ObjectId productId) async {
     try {
-      await cartCollection.update(where.eq('userId', userId),
-          modify.pull('items', {'productId': productId}));
+      await cartCollection.update(where.eq('userId', userId), modify.pull('items', {'productId': productId}));
     } catch (e) {
       print("Lỗi khi xóa sản phẩm khỏi giỏ hàng: $e");
     }
@@ -350,8 +362,7 @@ class MongoDatabase {
 
   static Future<void> clearCart(ObjectId userId) async {
     try {
-      await cartCollection.update(
-          where.eq('userId', userId), modify.set('items', []));
+      await cartCollection.update(where.eq('userId', userId), modify.set('items', []));
     } catch (e) {
       print("Lỗi khi xóa giỏ hàng: $e");
     }
@@ -366,38 +377,26 @@ class MongoDatabase {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getOrdersByUserId(
-      ObjectId userId) async {
+  static Future<List<Map<String, dynamic>>> getOrdersByUserId(ObjectId userId) async {
     try {
-      final orders = await orderCollection
-          .find(where.eq('userId', userId).sortBy('orderDate', descending: true))
-          .toList();
-      return orders;
-    } catch (e) {
+      return await orderCollection.find(where.eq('userId', userId).sortBy('orderDate', descending: true)).toList();
+    } catch(e) {
       print("Lỗi khi lấy danh sách đơn hàng của người dùng: $e");
       return [];
     }
   }
 
-  static Future<void> addToFavorites(
-      ObjectId userId, ObjectId productId) async {
+  static Future<void> addToFavorites(ObjectId userId, ObjectId productId) async {
     try {
-      await userCollection.updateOne(
-        where.id(userId),
-        modify.addToSet('favorites', productId),
-      );
+      await userCollection.updateOne(where.id(userId), modify.addToSet('favorites', productId));
     } catch (e) {
       print('Lỗi khi thêm vào yêu thích: $e');
     }
   }
 
-  static Future<void> removeFromFavorites(
-      ObjectId userId, ObjectId productId) async {
+  static Future<void> removeFromFavorites(ObjectId userId, ObjectId productId) async {
     try {
-      await userCollection.updateOne(
-        where.id(userId),
-        modify.pull('favorites', productId),
-      );
+      await userCollection.updateOne(where.id(userId), modify.pull('favorites', productId));
     } catch (e) {
       print('Lỗi khi xóa khỏi yêu thích: $e');
     }
@@ -416,39 +415,22 @@ class MongoDatabase {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getFavoriteProducts(
-      ObjectId userId) async {
+  static Future<List<Map<String, dynamic>>> getFavoriteProducts(ObjectId userId) async {
     try {
       final favoriteIds = await getUserFavorites(userId);
-      if (favoriteIds.isEmpty) {
-        return [];
-      }
-      final products = await productCollection
-          .find(where.oneFrom('_id', favoriteIds))
-          .toList();
-      return products;
+      if (favoriteIds.isEmpty) return [];
+      return await productCollection.find(where.oneFrom('_id', favoriteIds)).toList();
     } catch (e) {
       print('Lỗi khi lấy chi tiết sản phẩm yêu thích: $e');
       return [];
     }
   }
 
-  static Future<bool> changePassword(
-      ObjectId userId, String oldPassword, String newPassword) async {
+  static Future<bool> changePassword(ObjectId userId, String oldPassword, String newPassword) async {
     try {
-      final user = await userCollection.findOne(
-        where.id(userId).eq('password', oldPassword),
-      );
-
-      if (user == null) {
-        return false;
-      }
-
-      await userCollection.updateOne(
-        where.id(userId),
-        modify.set('password', newPassword),
-      );
-
+      final user = await userCollection.findOne(where.id(userId).eq('password', oldPassword));
+      if (user == null) return false;
+      await userCollection.updateOne(where.id(userId), modify.set('password', newPassword));
       return true;
     } catch (e) {
       print('Lỗi khi đổi mật khẩu: $e');
@@ -458,8 +440,7 @@ class MongoDatabase {
 
   static Future<int> getTotalUsers() async {
     try {
-      final count = await userCollection.count();
-      return count;
+      return await userCollection.count();
     } catch (e) {
       print('Lỗi khi lấy tổng số người dùng: $e');
       return 0;
@@ -468,8 +449,7 @@ class MongoDatabase {
 
   static Future<int> getTotalProducts() async {
     try {
-      final count = await productCollection.count();
-      return count;
+      return await productCollection.count();
     } catch (e) {
       print('Lỗi khi lấy tổng số sản phẩm: $e');
       return 0;
@@ -478,8 +458,7 @@ class MongoDatabase {
 
   static Future<int> getTotalOrders() async {
     try {
-      final count = await orderCollection.count();
-      return count;
+      return await orderCollection.count();
     } catch (e) {
       print('Lỗi khi lấy tổng số đơn hàng: $e');
       return 0;
@@ -489,19 +468,10 @@ class MongoDatabase {
   static Future<double> getTotalRevenue() async {
     try {
       final pipeline = [
-        {
-          '\$match': {'status': 'Delivered'}
-        },
-        {
-          '\$group': {
-            '_id': null,
-            'totalRevenue': {'\$sum': '\$totalPrice'}
-          }
-        }
+        {'\$match': {'status': 'Delivered'}},
+        {'\$group': {'_id': null, 'totalRevenue': {'\$sum': '\$totalPrice'}}}
       ];
-
       final result = await orderCollection.aggregateToStream(pipeline).toList();
-
       if (result.isNotEmpty && result.first['totalRevenue'] != null) {
         return (result.first['totalRevenue'] as num).toDouble();
       }
@@ -515,20 +485,10 @@ class MongoDatabase {
   static Future<Map<String, int>> getOrderStatusCounts() async {
     try {
       final pipeline = [
-        {
-          '\$group': {'_id': '\$status', 'count': {'\$sum': 1}}
-        }
+        {'\$group': {'_id': '\$status', 'count': {'\$sum': 1}}}
       ];
-
       final result = await orderCollection.aggregateToStream(pipeline).toList();
-
-      final Map<String, int> statusCounts = {
-        'Pending': 0,
-        'Shipping': 0,
-        'Delivered': 0,
-        'Cancelled': 0,
-      };
-
+      final Map<String, int> statusCounts = {'Pending': 0, 'Shipping': 0, 'Delivered': 0, 'Cancelled': 0};
       for (var doc in result) {
         if (doc['_id'] != null && statusCounts.containsKey(doc['_id'])) {
           statusCounts[doc['_id']] = doc['count'];
@@ -541,15 +501,10 @@ class MongoDatabase {
     }
   }
 
-  static Future<String> createCustomOrder(
-      Map<String, dynamic> customOrderData) async {
+  static Future<String> createCustomOrder(Map<String, dynamic> customOrderData) async {
     try {
       var result = await customOrderCollection.insertOne(customOrderData);
-      if (result.isSuccess) {
-        return "Yêu cầu của bạn đã được gửi đi thành công!";
-      } else {
-        return "Gửi yêu cầu thất bại: ${result.errmsg}";
-      }
+      return result.isSuccess ? "Yêu cầu của bạn đã được gửi đi thành công!" : "Gửi yêu cầu thất bại: ${result.errmsg}";
     } catch (e) {
       print('Lỗi khi tạo đơn hàng tùy chỉnh: $e');
       return "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.";

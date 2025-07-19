@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:doan_ltmobi/page/custom_cake_order_screen.dart';
 import 'package:doan_ltmobi/page/loyalty_program_screen.dart';
+import 'package:doan_ltmobi/page/notifications_screen.dart';
 import 'package:doan_ltmobi/page/product_detail_screen.dart';
 import 'package:doan_ltmobi/page/promotion_detail_screen.dart';
 import 'package:doan_ltmobi/page/promotions_screen.dart';
@@ -14,6 +15,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/vn_location_search.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
+import 'package:badges/badges.dart' as badges;
 
 class HomePageBody extends StatefulWidget {
   final Map<String, dynamic> userDocument;
@@ -52,8 +54,9 @@ class _HomePageBodyState extends State<HomePageBody> {
   int _currentBannerIndex = 0;
   Timer? _timer;
   late String _currentCity;
+  int _unreadCount = 0;
 
-  static const Color primaryColor = Color(0xFFE57373);
+  static const Color primaryColor = Color(0xFFE91E63);
   final NumberFormat currencyFormatter =
       NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
@@ -68,9 +71,19 @@ class _HomePageBodyState extends State<HomePageBody> {
       if (banners.isNotEmpty) _startAutoScroll(banners.length);
     });
     _fetchFavorites();
+    _fetchUnreadCount();
   }
-  
-  // KHÔI PHỤC: Các hàm logic đã bị thiếu
+
+  Future<void> _fetchUnreadCount() async {
+    if (!mounted) return;
+    final count = await MongoDatabase.getUnreadNotificationCount(widget.userDocument['_id']);
+    if (mounted) {
+      setState(() {
+        _unreadCount = count;
+      });
+    }
+  }
+
   Future<void> _fetchFavorites() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
     _favoriteProductIds = await MongoDatabase.getUserFavorites(userId);
@@ -146,6 +159,7 @@ class _HomePageBodyState extends State<HomePageBody> {
             _bestSellersFuture = _fetchBestSellers();
           });
           await _fetchFavorites();
+          await _fetchUnreadCount();
         },
         child: SafeArea(
           child: ListView(
@@ -212,10 +226,92 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
+  Widget _buildHeader() => Row(children: [
+        _buildProfileAvatarWithBadge(),
+        const SizedBox(width: 12),
+        Expanded(
+          child: InkWell(
+            onTap: _chooseLocation,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              // SỬA ĐỔI: Khôi phục lại màu gradient hồng
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [primaryColor.withAlpha(26), Colors.white],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_on, color: primaryColor, size: 20),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _currentCity,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 20, color: primaryColor),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ]);
+      
+  Widget _buildProfileAvatarWithBadge() {
+    ImageProvider image;
+    if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
+      try {
+        final Uint8List bytes = base64Decode(widget.profileImageBase64!);
+        image = MemoryImage(bytes);
+      } catch (_) {
+        image = const AssetImage("assets/image/default-avatar.png");
+      }
+    } else {
+      image = const AssetImage("assets/image/default-avatar.png");
+    }
+    
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NotificationsScreen(userId: widget.userDocument['_id']),
+          ),
+        );
+        _fetchUnreadCount();
+      },
+      child: badges.Badge(
+        position: badges.BadgePosition.topEnd(top: -5, end: -7),
+        showBadge: _unreadCount > 0,
+        badgeContent: Text(
+          _unreadCount.toString(),
+          style: const TextStyle(color: Colors.white, fontSize: 10),
+        ),
+        badgeStyle: const badges.BadgeStyle(
+          badgeColor: Colors.redAccent,
+        ),
+        child: CircleAvatar(
+          radius: 28,
+          backgroundImage: image
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeaturedActionsSection() {
     final int points = widget.userDocument['loyaltyPoints'] ?? 0;
-    
-    // Thống nhất màu sắc
     const Color primaryCardColor = Color(0xFFE91E63);
     final Color cardBackgroundColor = Colors.pink.shade50;
 
@@ -292,66 +388,6 @@ class _HomePageBodyState extends State<HomePageBody> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHeader() => Row(children: [
-        _buildProfileAvatar(),
-        const SizedBox(width: 12),
-        Expanded(
-          child: InkWell(
-            onTap: _chooseLocation, // KHÔI PHỤC
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primaryColor.withAlpha(26), Colors.white],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.location_on, color: primaryColor, size: 20),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _currentCity,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 14),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down_rounded,
-                      size: 20, color: primaryColor),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ]);
-      
-  Widget _buildProfileAvatar() {
-    ImageProvider image;
-    if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
-      try {
-        final Uint8List bytes = base64Decode(widget.profileImageBase64!);
-        image = MemoryImage(bytes);
-      } catch (_) {
-        image = const AssetImage("assets/image/default-avatar.png");
-      }
-    } else {
-      image = const AssetImage("assets/image/default-avatar.png");
-    }
-    return CircleAvatar(
-      radius: 28,
-      backgroundImage: image
     );
   }
 
@@ -574,7 +610,7 @@ class _HomePageBodyState extends State<HomePageBody> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                         InkWell(
-                            onTap: () => _handleAddToCart(product), // KHÔI PHỤC
+                            onTap: () => _handleAddToCart(product),
                             borderRadius: BorderRadius.circular(20),
                             child: Container(
                               padding: const EdgeInsets.all(6),
