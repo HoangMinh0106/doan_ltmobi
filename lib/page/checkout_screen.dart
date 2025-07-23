@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:flutter_paypal_payment/flutter_paypal_payment.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;
@@ -42,6 +44,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _membershipLevel = 'Đồng';
   double _membershipDiscount = 0.0;
   bool _isCheckingMembership = true;
+  bool _isLoadingLocation = false;
 
   final NumberFormat _currency = NumberFormat('#,##0', 'vi_VN');
 
@@ -53,6 +56,63 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.initState();
     _selectedAddress = widget.shippingAddress.trim();
     _checkMembershipStatus();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Dịch vụ vị trí đã bị tắt.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Bạn đã từ chối quyền truy cập vị trí.');
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Quyền vị trí bị từ chối vĩnh viễn, không thể yêu cầu quyền.');
+      } 
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high
+      );
+
+      // --- SỬA LỖI: XÓA DÒNG `localeIdentifier` ---
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String fullAddress = [
+          if (place.street != null && place.street!.isNotEmpty) place.street,
+          if (place.subLocality != null && place.subLocality!.isNotEmpty) place.subLocality,
+          if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) place.subAdministrativeArea,
+          if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) place.administrativeArea,
+          if (place.country != null && place.country!.isNotEmpty) place.country,
+        ].where((s) => s != null).join(', ');
+
+        setState(() {
+          _selectedAddress = fullAddress;
+        });
+      }
+    } catch (e) {
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lấy vị trí: $e'))
+        );
+      }
+    } finally {
+      if(mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
+    }
   }
 
   Future<void> _checkMembershipStatus() async {
@@ -297,6 +357,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             title: 'Giao đến',
             subtitle: _selectedAddress.isEmpty ? 'Chưa chọn địa chỉ' : _selectedAddress,
             onTap: _selectAddress,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: _isLoadingLocation
+                ? const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator()))
+                : Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                      onPressed: _getCurrentLocation,
+                      icon: const Icon(Icons.my_location),
+                      label: const Text('Sử dụng vị trí hiện tại'),
+                    ),
+                ),
           ),
           const SizedBox(height: 20),
           _buildSection('Mã giảm giá'),

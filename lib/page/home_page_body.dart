@@ -17,6 +17,9 @@ import 'package:doan_ltmobi/page/vn_location_search.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:badges/badges.dart' as badges;
 import 'package:doan_ltmobi/widgets/flash_sale_banner.dart';
+// --- THÊM CÁC IMPORT MỚI ---
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class HomePageBody extends StatefulWidget {
   final Map<String, dynamic> userDocument;
@@ -58,6 +61,9 @@ class _HomePageBodyState extends State<HomePageBody> {
   late String _currentCity;
   int _unreadCount = 0;
 
+  // --- THÊM BIẾN STATE MỚI ---
+  bool _isFetchingLocation = false;
+
   static const Color primaryColor = Color(0xFFE91E63);
   final NumberFormat currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
@@ -66,8 +72,58 @@ class _HomePageBodyState extends State<HomePageBody> {
     super.initState();
     _currentCity = widget.initialAddress;
     _loadData();
+    // Tự động lấy vị trí nếu địa chỉ ban đầu là mặc định
+    if (widget.initialAddress == 'Vui lòng chọn địa chỉ của bạn!') {
+      _getCurrentLocationAndSetAddress();
+    }
   }
 
+  // --- HÀM MỚI: Tự động lấy vị trí ---
+  Future<void> _getCurrentLocationAndSetAddress() async {
+    if (_isFetchingLocation) return;
+    setState(() => _isFetchingLocation = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Dịch vụ vị trí đã bị tắt.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Bạn đã từ chối quyền truy cập vị trí.');
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Quyền vị trí bị từ chối vĩnh viễn, không thể yêu cầu quyền.');
+      } 
+
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+
+      if (placemarks.isNotEmpty && mounted) {
+        Placemark place = placemarks[0];
+        String fullAddress = [
+          if (place.street != null && place.street!.isNotEmpty) place.street,
+          if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) place.subAdministrativeArea,
+          if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) place.administrativeArea,
+        ].where((s) => s != null).join(', ');
+
+        setState(() => _currentCity = fullAddress);
+        widget.onAddressChanged(fullAddress);
+      }
+    } catch (e) {
+      // Bỏ qua lỗi và để người dùng tự chọn
+      print('Lỗi khi tự động lấy vị trí: $e');
+    } finally {
+      if(mounted) {
+        setState(() => _isFetchingLocation = false);
+      }
+    }
+  }
+  
   void _loadData() {
     setState(() {
       _bannersFuture = MongoDatabase.bannerCollection.find().toList();
@@ -155,7 +211,7 @@ class _HomePageBodyState extends State<HomePageBody> {
     widget.onProductAdded();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Đã thêm '${product['name']}' vào giỏ hàng!"), backgroundColor: Colors.green));
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,7 +237,6 @@ class _HomePageBodyState extends State<HomePageBody> {
               ),
               const SizedBox(height: 24),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: _buildSearchBar()),
-              // --- VỊ TRÍ MỚI CỦA FLASH SALE ---
               _buildFlashSaleSection(),
               _buildFeaturedActionsSection(),
               Padding(
@@ -205,16 +260,15 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
-  // --- PHIÊN BẢN HOÀN CHỈNH CHO FLASH SALE ---
   Widget _buildFlashSaleSection() {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _flashSaleFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink(); // Không hiển thị gì khi đang tải
+          return const SizedBox.shrink();
         }
         if (!snapshot.hasData || snapshot.data == null) {
-          return const SizedBox.shrink(); // Không có sale thì không hiển thị
+          return const SizedBox.shrink();
         }
 
         final saleData = snapshot.data!;
@@ -230,7 +284,6 @@ class _HomePageBodyState extends State<HomePageBody> {
           return FlashSaleBanner(
             endTime: endTime, 
             products: products,
-            // --- TRUYỀN CÁC THAM SỐ CẦN THIẾT XUỐNG ---
             userDocument: widget.userDocument,
             onProductAdded: widget.onProductAdded,
             selectedAddress: _currentCity,
@@ -238,13 +291,12 @@ class _HomePageBodyState extends State<HomePageBody> {
             onFavoriteToggle: _toggleFavorite,
           );
         }
-        // Bạn có thể giữ lại widget debug nếu muốn
-        // return _DebugInfoBox(...);
         return const SizedBox.shrink();
       },
     );
   }
 
+  // --- WIDGET HEADER ĐÃ ĐƯỢC CẬP NHẬT ---
   Widget _buildHeader() => Row(children: [
         _buildProfileAvatarWithBadge(),
         const SizedBox(width: 12),
@@ -265,7 +317,9 @@ class _HomePageBodyState extends State<HomePageBody> {
                   const Icon(Icons.location_on, color: primaryColor, size: 20),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1),
+                    child: _isFetchingLocation 
+                      ? const Text('Đang tìm vị trí...', style: TextStyle(color: Colors.grey))
+                      : Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1),
                   ),
                   const SizedBox(width: 4),
                   const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: primaryColor),
