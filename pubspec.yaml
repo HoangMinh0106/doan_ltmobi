@@ -13,7 +13,7 @@ dependencies:
     
   # Icons and Fonts
   cupertino_icons: ^1.0.8
-  google_fonts: ^4.0.4 # <-- SỬA LỖI: Hạ cấp để tương thích với http: ^0.13.6
+  google_fonts: ^4.0.4
 
   # State & Storage
   shared_preferences: ^2.2.3
@@ -27,6 +27,7 @@ dependencies:
   elegant_notification: ^2.2.0
   fl_chart: ^0.68.0
   badges: ^3.1.2
+  flutter_timer_countdown: ^1.0.7 # <-- THÊM MỚI
 
   # Utilities
   intl: ^0.19.0
@@ -35,7 +36,7 @@ dependencies:
   mailer: ^6.1.0
   random_string: ^2.3.1
   crypto: ^3.0.3
-  http: ^0.13.6 # Giữ phiên bản này để tương thích với google_place
+  http: ^0.13.6
 
   # Payment Integrations
   flutter_paypal_payment: ^1.0.6

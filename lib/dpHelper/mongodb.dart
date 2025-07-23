@@ -18,7 +18,10 @@ class MongoDatabase {
   static late DbCollection reviewCollection;
   static late DbCollection customOrderCollection;
   static late DbCollection pointHistoryCollection;
-  static late DbCollection notificationCollection; // <-- Bổ sung lại
+  static late DbCollection notificationCollection;
+
+  // --- THÊM MỚI CHO FLASH SALE ---
+  static late DbCollection flashSaleCollection;
 
   static connect() async {
     db = await Db.create(MONGO_CONN_URL);
@@ -34,10 +37,53 @@ class MongoDatabase {
     reviewCollection = db.collection("reviews");
     customOrderCollection = db.collection("custom_orders");
     pointHistoryCollection = db.collection("point_history");
-    notificationCollection = db.collection("notifications"); // <-- Bổ sung lại
+    notificationCollection = db.collection("notifications");
+
+    // --- THÊM MỚI CHO FLASH SALE ---
+    flashSaleCollection = db.collection("flash_sales");
   }
 
-  // --- HÀM CHO CHỨC NĂNG THÔNG BÁO (BỔ SUNG LẠI) ---
+  // --- HÀM CẬP NHẬT CHO FLASH SALE ---
+  static Future<Map<String, dynamic>?> getFlashSale() async {
+    try {
+      final sale = await flashSaleCollection.findOne(where.eq('_id', 'current_sale'));
+
+      if (sale != null && sale['isActive'] == true) {
+        // Lấy danh sách sản phẩm sale (mỗi phần tử là một Map {'productId': ..., 'salePrice': ...})
+        final saleProductInfo = (sale['products'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+
+        if (saleProductInfo.isNotEmpty) {
+           // Lấy ra danh sách các ObjectId của sản phẩm
+           final productIds = saleProductInfo.map((p) => p['productId'] as ObjectId).toList();
+
+           // Tìm tất cả sản phẩm có trong danh sách ID
+           final products = await productCollection.find(where.oneFrom('_id', productIds)).toList();
+
+           // Gộp giá sale vào thông tin sản phẩm
+           for (var product in products) {
+             try {
+                final saleInfo = saleProductInfo.firstWhere((p) => p['productId'] == product['_id']);
+                product['salePrice'] = saleInfo['salePrice'];
+             } catch(e) {
+                // Nếu không tìm thấy thông tin sale, giá sale bằng giá gốc
+                product['salePrice'] = product['price'];
+             }
+           }
+
+           sale['products'] = products; // Gán lại danh sách sản phẩm đã có giá sale
+        } else {
+           sale['products'] = [];
+        }
+        return sale;
+      }
+      return null;
+    } catch (e) {
+      print("Lỗi khi lấy dữ liệu Flash Sale: $e");
+      return null;
+    }
+  }
+
+  // --- HÀM CHO CHỨC NĂNG THÔNG BÁO ---
 
   static Future<void> createNotification({
     required ObjectId userId,
@@ -71,7 +117,7 @@ class MongoDatabase {
       return [];
     }
   }
-  
+
   static Future<int> getUnreadNotificationCount(ObjectId userId) async {
     try {
       return await notificationCollection.count(
@@ -93,7 +139,7 @@ class MongoDatabase {
       print("Lỗi khi đánh dấu đã đọc: $e");
     }
   }
-  
+
   static Future<void> markAllAsRead(ObjectId userId) async {
     try {
       await notificationCollection.updateMany(
@@ -105,7 +151,7 @@ class MongoDatabase {
     }
   }
 
-  // --- CÁC HÀM CŨ ---
+  // --- CÁC HÀM CŨ (GIỮ NGUYÊN) ---
 
   static Future<void> insertUser(String email, String password) async {
     try {
@@ -180,6 +226,7 @@ class MongoDatabase {
     }
   }
 
+  // --- HÀM ĐƯỢC CẬP NHẬT CHO KHO VOUCHER ---
   static Future<Map<String, dynamic>> redeemPointsForVoucher({
     required ObjectId userId,
     required int pointsToRedeem,
@@ -209,12 +256,26 @@ class MongoDatabase {
         'minPurchase': 0.0,
         'isActive': true,
         'description': 'Voucher đổi từ $pointsToRedeem điểm',
+        'userId': userId, // <-- THÊM MỚI: Gán voucher cho người dùng
       });
       
       return {'success': true, 'message': 'Đổi điểm thành công! Mã voucher của bạn là: $voucherCode'};
     } catch (e) {
       print("Lỗi khi đổi điểm: $e");
       return {'success': false, 'message': 'Đã xảy ra lỗi, vui lòng thử lại.'};
+    }
+  }
+
+  // --- HÀM MỚI CHO KHO VOUCHER ---
+  static Future<List<Map<String, dynamic>>> getVouchersForUser(ObjectId userId) async {
+    try {
+      // Tìm tất cả voucher có userId trùng khớp và còn hoạt động
+      return await voucherCollection.find(
+        where.eq('userId', userId).eq('isActive', true)
+      ).toList();
+    } catch (e) {
+      print("Lỗi khi lấy voucher của người dùng: $e");
+      return [];
     }
   }
 

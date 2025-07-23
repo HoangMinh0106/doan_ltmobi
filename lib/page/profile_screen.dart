@@ -4,9 +4,10 @@ import 'dart:convert';
 import 'package:doan_ltmobi/page/change_password_screen.dart';
 import 'package:doan_ltmobi/page/edit_profile_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
-import 'package:doan_ltmobi/page/membership_screen.dart'; // MỚI: Import trang thành viên
+import 'package:doan_ltmobi/page/membership_screen.dart';
 import 'package:doan_ltmobi/page/order_history_screen.dart';
 import 'package:doan_ltmobi/page/favorites_screen.dart';
+import 'package:doan_ltmobi/page/voucher_wallet_screen.dart'; // <-- THÊM IMPORT MỚI
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,7 +118,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              // Card thành viên đã được xóa khỏi đây
               _buildProfileMenu(context),
             ],
           ),
@@ -160,7 +160,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
           
-          // MỚI: Thêm nút Hạng thành viên vào menu
           _buildMenuItem(
             icon: Icons.workspace_premium_outlined,
             text: 'Hạng thành viên',
@@ -169,6 +168,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => MembershipScreen(userDocument: _currentUserDocument),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+
+          // --- THÊM MỤC MỚI TẠI ĐÂY ---
+          _buildMenuItem(
+            icon: Icons.local_offer_outlined,
+            text: 'Kho Voucher',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VoucherWalletScreen(userDocument: _currentUserDocument),
                 ),
               );
             },

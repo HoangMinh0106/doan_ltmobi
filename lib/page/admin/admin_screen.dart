@@ -1,3 +1,5 @@
+// lib/page/admin/admin_screen.dart
+
 import 'package:doan_ltmobi/page/admin/user_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/category_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/product_management_screen.dart';
@@ -7,7 +9,8 @@ import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'voucher_management_screen.dart';
 import 'statistics_screen.dart';
-import 'custom_order_management_screen.dart'; // <-- Import chức năng mới
+import 'custom_order_management_screen.dart';
+import 'flash_sale_admin_screen.dart'; // <-- BƯỚC 1: IMPORT MÀN HÌNH MỚI
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -58,7 +61,7 @@ class AdminScreen extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: GridView.count(  // Khôi phục layout lưới gốc với 2 cột
+        child: GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
@@ -161,6 +164,20 @@ class AdminScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const PromotionManagementScreen()),
+                );
+              },
+            ),
+            // --- BƯỚC 2: THÊM WIDGET MỚI TẠI ĐÂY ---
+            _buildDashboardCard(
+              context: context,
+              icon: Icons.flash_on_outlined,
+              title: 'Quản lý Flash Sale',
+              color: Colors.amber.shade700,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const FlashSaleAdminScreen()),
                 );
               },
             ),
