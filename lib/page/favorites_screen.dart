@@ -1,5 +1,3 @@
-// lib/page/favorites_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
@@ -31,7 +29,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   void _removeFromFavorites(mongo.ObjectId productId) async {
     await MongoDatabase.removeFromFavorites(widget.userDocument['_id'], productId);
-    _loadFavorites(); 
+    _loadFavorites();
   }
 
   @override
@@ -83,7 +81,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget _buildFavoriteItem(Map<String, dynamic> product) {
     final String name = product['name'] ?? 'N/A';
     final double price = (product['price'] as num?)?.toDouble() ?? 0.0;
-    final String imageUrl = product['imageUrl'] ?? '';
+    // **SỬA LỖI**: Giữ kiểu dữ liệu nullable để kiểm tra
+    final String? imageUrl = product['imageUrl'];
     final productId = product['_id'] as mongo.ObjectId;
     final currencyFormatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
@@ -95,20 +94,28 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                imageUrl,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                  );
-                },
-              ),
+              // **SỬA LỖI**: Kiểm tra imageUrl trước khi hiển thị
+              child: (imageUrl != null && imageUrl.isNotEmpty)
+                  ? Image.network(
+                      imageUrl,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 80,
+                          height: 80,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                        );
+                      },
+                    )
+                  : Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(

@@ -1,5 +1,3 @@
-// lib/page/admin/order_management_screen.dart
-
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/admin/order_detail_screen.dart';
 import 'package:elegant_notification/elegant_notification.dart';
@@ -29,12 +27,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   Future<void> _updateOrderStatus(Map<String, dynamic> order, String newStatus) async {
     final String currentStatus = order['status'] ?? 'Pending';
-    
+
     // Cộng điểm tích lũy NẾU trạng thái MỚI là "Đã giao" và trạng thái CŨ KHÁC "Đã giao"
     if (newStatus == 'Delivered' && currentStatus != 'Delivered') {
       await MongoDatabase.addPointsForOrder(order);
     }
-    
+
     try {
       await MongoDatabase.orderCollection.update(
         m.where.id(order['_id']),
@@ -148,67 +146,77 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                   title: Text('Đơn hàng: #${order['_id'].toHexString().substring(0, 8)}...'),
                   subtitle: Text("Ngày: ${DateFormat('dd/MM/yyyy').format(order['orderDate'])} - Trạng thái: ${statusMap[currentStatus] ?? currentStatus}"),
                   children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ...?(order['products'] as List?)?.map<Widget>((product) {
-                              return ListTile(
-                                leading: Image.network(product['imageUrl'] ?? '', width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image_not_supported)),
-                                title: Text(product['name'] ?? 'N/A'),
-                                subtitle: Text("Số lượng: ${product['quantity']}"),
-                              );
-                            }).toList(),
-                            const Divider(),
-                            InkWell(
-                              onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => OrderDetailScreen(order: order),
-                                    ),
-                                  ).then((_) {
-                                  _refreshOrders();
-                                  });
-                                },
-                              child: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Text("Xem chi tiết đơn hàng...", style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
-                              ),
-                            ),
-                            const Divider(),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Cập nhật trạng thái:", style: TextStyle(fontWeight: FontWeight.bold)),
-                                DropdownButton<String>(
-                                  value: currentStatus,
-                                  items: statusMap.keys.map((String key) {
-                                    return DropdownMenuItem<String>(
-                                      value: key,
-                                      child: Text(statusMap[key]!),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    if (newValue != null && newValue != currentStatus) {
-                                      _updateOrderStatus(order, newValue);
-                                    }
-                                  },
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ...?(order['products'] as List?)?.map<Widget>((product) {
+                            // **SỬA LỖI**: Lấy URL
+                            final imageUrl = product['imageUrl'] as String?;
+                            return ListTile(
+                              // **SỬA LỖI**: Hiển thị ảnh hoặc placeholder
+                              leading: (imageUrl != null && imageUrl.isNotEmpty)
+                                ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image_not_supported))
+                                : Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                                  ),
+                              title: Text(product['name'] ?? 'N/A'),
+                              subtitle: Text("Số lượng: ${product['quantity']}"),
+                            );
+                          }).toList(),
+                          const Divider(),
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => OrderDetailScreen(order: order),
                                 ),
-                              ],
+                              ).then((_) {
+                              _refreshOrders();
+                              });
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text("Xem chi tiết đơn hàng...", style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
                             ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                  tooltip: 'Xóa đơn hàng',
-                                  onPressed: () => _deleteOrder(order['_id']),
+                          ),
+                          const Divider(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Cập nhật trạng thái:", style: TextStyle(fontWeight: FontWeight.bold)),
+                              DropdownButton<String>(
+                                value: currentStatus,
+                                items: statusMap.keys.map((String key) {
+                                  return DropdownMenuItem<String>(
+                                    value: key,
+                                    child: Text(statusMap[key]!),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null && newValue != currentStatus) {
+                                    _updateOrderStatus(order, newValue);
+                                  }
+                                },
                               ),
-                            )
-                          ],
-                        ),
+                            ],
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                              tooltip: 'Xóa đơn hàng',
+                              onPressed: () => _deleteOrder(order['_id']),
+                            ),
+                          )
+                        ],
                       ),
+                    ),
                   ],
                 ),
               );

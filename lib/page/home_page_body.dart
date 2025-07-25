@@ -1,5 +1,3 @@
-// lib/page/home_page_body.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -61,7 +59,6 @@ class _HomePageBodyState extends State<HomePageBody> {
   late String _currentCity;
   int _unreadCount = 0;
 
-  // --- THÊM BIẾN STATE MỚI ---
   bool _isFetchingLocation = false;
 
   static const Color primaryColor = Color(0xFFE91E63);
@@ -72,13 +69,11 @@ class _HomePageBodyState extends State<HomePageBody> {
     super.initState();
     _currentCity = widget.initialAddress;
     _loadData();
-    // Tự động lấy vị trí nếu địa chỉ ban đầu là mặc định
     if (widget.initialAddress == 'Vui lòng chọn địa chỉ của bạn!') {
       _getCurrentLocationAndSetAddress();
     }
   }
 
-  // --- HÀM MỚI: Tự động lấy vị trí ---
   Future<void> _getCurrentLocationAndSetAddress() async {
     if (_isFetchingLocation) return;
     setState(() => _isFetchingLocation = true);
@@ -95,10 +90,10 @@ class _HomePageBodyState extends State<HomePageBody> {
           throw Exception('Bạn đã từ chối quyền truy cập vị trí.');
         }
       }
-      
+
       if (permission == LocationPermission.deniedForever) {
         throw Exception('Quyền vị trí bị từ chối vĩnh viễn, không thể yêu cầu quyền.');
-      } 
+      }
 
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
@@ -115,15 +110,14 @@ class _HomePageBodyState extends State<HomePageBody> {
         widget.onAddressChanged(fullAddress);
       }
     } catch (e) {
-      // Bỏ qua lỗi và để người dùng tự chọn
       print('Lỗi khi tự động lấy vị trí: $e');
     } finally {
-      if(mounted) {
+      if (mounted) {
         setState(() => _isFetchingLocation = false);
       }
     }
   }
-  
+
   void _loadData() {
     setState(() {
       _bannersFuture = MongoDatabase.bannerCollection.find().toList();
@@ -211,7 +205,7 @@ class _HomePageBodyState extends State<HomePageBody> {
     widget.onProductAdded();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Đã thêm '${product['name']}' vào giỏ hàng!"), backgroundColor: Colors.green));
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -275,14 +269,14 @@ class _HomePageBodyState extends State<HomePageBody> {
         final DateTime endTime = saleData['endTime'];
         final DateTime startTime = saleData['startTime'];
         final now = DateTime.now();
-        
+
         if (now.isAfter(startTime) && now.isBefore(endTime)) {
           final products = (saleData['products'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-          
+
           if (products.isEmpty) return const SizedBox.shrink();
-          
+
           return FlashSaleBanner(
-            endTime: endTime, 
+            endTime: endTime,
             products: products,
             userDocument: widget.userDocument,
             onProductAdded: widget.onProductAdded,
@@ -296,7 +290,6 @@ class _HomePageBodyState extends State<HomePageBody> {
     );
   }
 
-  // --- WIDGET HEADER ĐÃ ĐƯỢC CẬP NHẬT ---
   Widget _buildHeader() => Row(children: [
         _buildProfileAvatarWithBadge(),
         const SizedBox(width: 12),
@@ -317,9 +310,9 @@ class _HomePageBodyState extends State<HomePageBody> {
                   const Icon(Icons.location_on, color: primaryColor, size: 20),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: _isFetchingLocation 
-                      ? const Text('Đang tìm vị trí...', style: TextStyle(color: Colors.grey))
-                      : Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1),
+                    child: _isFetchingLocation
+                        ? const Text('Đang tìm vị trí...', style: TextStyle(color: Colors.grey))
+                        : Text(_currentCity, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 1),
                   ),
                   const SizedBox(width: 4),
                   const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: primaryColor),
@@ -329,7 +322,7 @@ class _HomePageBodyState extends State<HomePageBody> {
           ),
         ),
       ]);
-      
+
   Widget _buildProfileAvatarWithBadge() {
     ImageProvider image;
     if (widget.profileImageBase64 != null && widget.profileImageBase64!.isNotEmpty) {
@@ -342,7 +335,7 @@ class _HomePageBodyState extends State<HomePageBody> {
     } else {
       image = const AssetImage("assets/image/default-avatar.png");
     }
-    
+
     return GestureDetector(
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationsScreen(userId: widget.userDocument['_id'])));
@@ -453,15 +446,26 @@ class _HomePageBodyState extends State<HomePageBody> {
                 controller: _pageController,
                 itemCount: banners.length,
                 onPageChanged: (i) => setState(() => _currentBannerIndex = i),
-                itemBuilder: (_, i) => InkWell(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PromotionDetailScreen(promotion: banners[i]))),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withAlpha(26), blurRadius: 10, offset: const Offset(0, 4))]),
-                    child: ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.network(banners[i]['imageUrl'] ?? '', fit: BoxFit.cover)),
-                  ),
-                ),
-              )),
+                itemBuilder: (_, i) {
+                  // **SỬA LỖI**: Lấy URL và kiểm tra
+                  final imageUrl = banners[i]['imageUrl'] as String?;
+                  return InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PromotionDetailScreen(promotion: banners[i]))),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withAlpha(26), blurRadius: 10, offset: const Offset(0, 4))]),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        // **SỬA LỖI**: Hiển thị ảnh hoặc placeholder
+                        child: (imageUrl != null && imageUrl.isNotEmpty)
+                            ? Image.network(imageUrl, fit: BoxFit.cover)
+                            : Container(color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported, color: Colors.grey)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
             const SizedBox(height: 12),
             AnimatedSmoothIndicator(
                 activeIndex: _currentBannerIndex,
@@ -508,6 +512,8 @@ class _HomePageBodyState extends State<HomePageBody> {
   Widget _buildProductCard(Map<String, dynamic> product) {
     final productId = product['_id'] as mongo.ObjectId;
     final isFavorite = _favoriteProductIds.contains(productId);
+    // **SỬA LỖI**: Lấy URL
+    final imageUrl = product['imageUrl'] as String?;
 
     return GestureDetector(
       onTap: () async {
@@ -532,7 +538,16 @@ class _HomePageBodyState extends State<HomePageBody> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
               child: Stack(children: [
-            ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), child: AspectRatio(aspectRatio: 1.1, child: Image.network(product['imageUrl'] ?? '', fit: BoxFit.cover))),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: AspectRatio(
+                aspectRatio: 1.1,
+                // **SỬA LỖI**: Hiển thị ảnh hoặc placeholder
+                child: (imageUrl != null && imageUrl.isNotEmpty)
+                    ? Image.network(imageUrl, fit: BoxFit.cover)
+                    : Container(color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported, color: Colors.grey)),
+              ),
+            ),
             Positioned(
                 top: 4,
                 right: 4,
@@ -549,8 +564,8 @@ class _HomePageBodyState extends State<HomePageBody> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 36,
-                  child: Text(product['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, height: 1.25), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    height: 36,
+                    child: Text(product['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, height: 1.25), maxLines: 2, overflow: TextOverflow.ellipsis)),
                 Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -595,47 +610,29 @@ class _HomePageBodyState extends State<HomePageBody> {
         ),
       );
 
-  Widget _buildCategoryItem(Map<String, dynamic> category) => GestureDetector(
-        onTap: () => widget.onCategorySelected((category['_id'] as mongo.ObjectId).oid),
-        child: Container(
-          color: Colors.transparent,
-          width: 90,
-          margin: const EdgeInsets.only(right: 12),
-          child: Column(children: [
-            Container(
-              height: 70,
-              width: 70,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFFFF0F0), shape: BoxShape.circle, border: Border.all(color: primaryColor.withAlpha(51))),
-              child: (category['imageUrl'] != null && category['imageUrl'].isNotEmpty) ? Image.network(category['imageUrl'], fit: BoxFit.contain) : const Icon(Icons.category, size: 35, color: primaryColor),
-            ),
-            const SizedBox(height: 8),
-            Text(category['name'] ?? 'N/A', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-          ]),
-        ),
-      );
-}
-
-// --- WIDGET DEBUG ---
-class _DebugInfoBox extends StatelessWidget {
-  final String message;
-  final Color color;
-  const _DebugInfoBox({required this.message, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        message,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold),
-        textAlign: TextAlign.center,
+  Widget _buildCategoryItem(Map<String, dynamic> category) {
+    // **SỬA LỖI**: Lấy URL
+    final imageUrl = category['imageUrl'] as String?;
+    return GestureDetector(
+      onTap: () => widget.onCategorySelected((category['_id'] as mongo.ObjectId).oid),
+      child: Container(
+        color: Colors.transparent,
+        width: 90,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(children: [
+          Container(
+            height: 70,
+            width: 70,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: const Color(0xFFFFF0F0), shape: BoxShape.circle, border: Border.all(color: primaryColor.withAlpha(51))),
+            // **SỬA LỖI**: Hiển thị ảnh hoặc placeholder
+            child: (imageUrl != null && imageUrl.isNotEmpty)
+                ? Image.network(imageUrl, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.category, size: 35, color: primaryColor))
+                : const Icon(Icons.category, size: 35, color: primaryColor),
+          ),
+          const SizedBox(height: 8),
+          Text(category['name'] ?? 'N/A', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        ]),
       ),
     );
   }

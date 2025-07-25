@@ -1,5 +1,3 @@
-// lib/dpHelper/mongodb.dart
-
 import 'dart:developer';
 import 'package:doan_ltmobi/dpHelper/constant.dart';
 import 'package:mongo_dart/mongo_dart.dart';
@@ -27,7 +25,9 @@ class MongoDatabase {
     db = await Db.create(MONGO_CONN_URL);
     await db.open();
     inspect(db);
-    userCollection = db.collection(USER_COLLECTION);
+    // *** BẮT ĐẦU SỬA LỖI ***
+    userCollection = db.collection(USER_COLLECTION); // Sửa lại tên biến cho đúng
+    // *** KẾT THÚC SỬA LỖI ***
     bannerCollection = db.collection("banners");
     categoryCollection = db.collection("categories");
     productCollection = db.collection("products");
@@ -42,6 +42,22 @@ class MongoDatabase {
     // --- THÊM MỚI CHO FLASH SALE ---
     flashSaleCollection = db.collection("flash_sales");
   }
+  
+  //*** BẮT ĐẦU SỬA LỖI ***
+  // HÀM MỚI: Vô hiệu hóa voucher sau khi sử dụng
+  static Future<void> invalidateVoucher(ObjectId voucherId) async {
+    try {
+      // Tìm voucher bằng ID và cập nhật trường 'isActive' thành false
+      await voucherCollection.updateOne(
+        where.id(voucherId),
+        modify.set('isActive', false),
+      );
+      print('Voucher $voucherId đã được vô hiệu hóa.');
+    } catch (e) {
+      print("Lỗi khi vô hiệu hóa voucher: $e");
+    }
+  }
+  //*** KẾT THÚC SỬA LỖI ***
 
   // --- HÀM CẬP NHẬT CHO FLASH SALE ---
   static Future<Map<String, dynamic>?> getFlashSale() async {
@@ -217,7 +233,8 @@ class MongoDatabase {
           'orderId': orderId,
           'points': pointsEarned,
           'type': 'earned',
-          'description': 'Tích điểm từ đơn hàng #${orderId.toHexString().substring(0, 6)}',
+          // **SỬA LỖI**: Thay toHexString() bằng oid
+          'description': 'Tích điểm từ đơn hàng #${orderId.oid.substring(0, 6)}',
           'date': DateTime.now(),
         });
       }

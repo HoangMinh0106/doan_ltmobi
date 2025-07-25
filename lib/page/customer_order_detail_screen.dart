@@ -1,5 +1,3 @@
-// lib/page/customer_order_detail_screen.dart
-
 import 'package:doan_ltmobi/page/add_review_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -79,60 +77,63 @@ class _CustomerOrderDetailScreenState extends State<CustomerOrderDetailScreen> {
                 title: 'Danh sách sản phẩm',
                 children: [
                   ...(_currentOrder['products'] as List).map<Widget>((product) {
-                    // =========================================================================
-                    // LOGIC QUYỀN ĐÁNH GIÁ:
-                    // - Chỉ cho phép khi đơn hàng có trạng thái là "Đã giao" ('Delivered')
-                    // - Và sản phẩm đó chưa được đánh giá (cờ 'reviewed' là false)
-                    // =========================================================================
                     final bool canReview = (_currentOrder['status'] == 'Delivered' && product['reviewed'] != true);
+                    
+                    // **SỬA LỖI**: Lấy URL và kiểm tra trước khi hiển thị
+                    final imageUrl = product['imageUrl'] as String?;
 
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Image.network(
-                        product['imageUrl'] ?? '',
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 50),
-                      ),
+                      leading: (imageUrl != null && imageUrl.isNotEmpty)
+                          ? Image.network(
+                              imageUrl,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 50),
+                            )
+                          : Container(
+                              width: 50,
+                              height: 50,
+                              color: Colors.grey.shade200,
+                              child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                            ),
                       title: Text(product['name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                              Text('Số lượng: ${product['quantity']}'),
-                              const SizedBox(height: 8),
-                              // ---- HIỂN THỊ NÚT "ĐÁNH GIÁ" HOẶC TRẠNG THÁI "ĐÃ ĐÁNH GIÁ" ----
-                              if (canReview)
-                                ElevatedButton.icon(
-                                    icon: const Icon(Icons.rate_review_outlined, size: 16),
-                                    label: const Text('Đánh giá'),
-                                    style: ElevatedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                        textStyle: const TextStyle(fontSize: 12),
-                                        backgroundColor: Colors.amber.shade700,
-                                        foregroundColor: Colors.white,
-                                    ),
-                                    onPressed: () async {
-                                        final success = await showDialog<bool>(
-                                            context: context,
-                                            barrierDismissible: false,
-                                            builder: (_) => AddReviewDialog(
-                                                userDocument: widget.userDocument,
-                                                product: product,
-                                                orderId: _currentOrder['_id'],
-                                            ),
-                                        );
-                                        // Nếu đánh giá thành công, cập nhật lại giao diện
-                                        if (success == true) {
-                                            setState(() {
-                                                product['reviewed'] = true;
-                                                _madeChanges = true; // Đánh dấu có sự thay đổi
-                                            });
-                                        }
-                                    },
-                                )
-                              else if (product['reviewed'] == true)
-                                const Text('✓ Đã đánh giá', style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic))
+                          Text('Số lượng: ${product['quantity']}'),
+                          const SizedBox(height: 8),
+                          if (canReview)
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.rate_review_outlined, size: 16),
+                              label: const Text('Đánh giá'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                textStyle: const TextStyle(fontSize: 12),
+                                backgroundColor: Colors.amber.shade700,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () async {
+                                final success = await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => AddReviewDialog(
+                                    userDocument: widget.userDocument,
+                                    product: product,
+                                    orderId: _currentOrder['_id'],
+                                  ),
+                                );
+                                if (success == true) {
+                                  setState(() {
+                                    product['reviewed'] = true;
+                                    _madeChanges = true;
+                                  });
+                                }
+                              },
+                            )
+                          else if (product['reviewed'] == true)
+                            const Text('✓ Đã đánh giá', style: TextStyle(color: Colors.green, fontStyle: FontStyle.italic))
                         ],
                       ),
                       trailing: Text('${NumberFormat('#,##0').format(product['price'])} VNĐ'),
