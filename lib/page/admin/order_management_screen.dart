@@ -1,11 +1,11 @@
 // lib/page/admin/order_management_screen.dart
 
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
+import 'package:doan_ltmobi/page/admin/order_detail_screen.dart';
 import 'package:elegant_notification/elegant_notification.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mongo_dart/mongo_dart.dart' as M;
-import 'order_detail_screen.dart';
+import 'package:mongo_dart/mongo_dart.dart' as m;
 
 class OrderManagementScreen extends StatefulWidget {
   const OrderManagementScreen({super.key});
@@ -20,21 +20,45 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     'Shipping': 'Đang giao',
     'Delivered': 'Đã giao',
     'Cancelled': 'Đã hủy',
+    'Awaiting Payment': 'Chờ thanh toán',
   };
 
-  Future<void> _updateOrderStatus(M.ObjectId orderId, String newStatus) async {
+  Future<void> _refreshOrders() async {
+    setState(() {});
+  }
+
+  Future<void> _updateOrderStatus(Map<String, dynamic> order, String newStatus) async {
+    final String currentStatus = order['status'] ?? 'Pending';
+    
+    // Cộng điểm tích lũy NẾU trạng thái MỚI là "Đã giao" và trạng thái CŨ KHÁC "Đã giao"
+    if (newStatus == 'Delivered' && currentStatus != 'Delivered') {
+      await MongoDatabase.addPointsForOrder(order);
+    }
+    
     try {
       await MongoDatabase.orderCollection.update(
-        M.where.id(orderId),
-        M.modify.set('status', newStatus),
+        m.where.id(order['_id']),
+        m.modify.set('status', newStatus),
       );
+
+      // Gửi thông báo cho người dùng
+      if (order['userId'] != null) {
+        await MongoDatabase.createNotification(
+          userId: order['userId'],
+          type: 'order_status',
+          title: 'Cập nhật đơn hàng #${(order['_id'] as m.ObjectId).toHexString().substring(0, 6)}',
+          body: 'Đơn hàng của bạn đã được chuyển sang trạng thái: ${statusMap[newStatus] ?? newStatus}.',
+          data: {'orderId': (order['_id'] as m.ObjectId).toHexString()}
+        );
+      }
+
       if (mounted) {
         ElegantNotification.success(
           title: const Text("Thành công"),
           description: const Text("Đã cập nhật trạng thái đơn hàng."),
         ).show(context);
       }
-      setState(() {});
+      _refreshOrders();
     } catch (e) {
       if (mounted) {
         ElegantNotification.error(
@@ -45,15 +69,13 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     }
   }
 
-  // --- THÊM MỚI HÀM NÀY ---
-  /// Xử lý việc xóa một đơn hàng sau khi có xác nhận.
-  Future<void> _deleteOrder(M.ObjectId orderId) async {
+  Future<void> _deleteOrder(m.ObjectId orderId) async {
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Xác nhận xóa'),
-          content: const Text('Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng này không? Hành động này không thể hoàn tác.'),
+          content: const Text('Bạn có chắc chắn muốn xóa vĩnh viễn đơn hàng này không?'),
           actions: <Widget>[
             TextButton(
               child: const Text('Hủy'),
@@ -77,7 +99,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             description: const Text("Đã xóa đơn hàng thành công."),
           ).show(context);
         }
-        setState(() {}); // Tải lại danh sách sau khi xóa
+        _refreshOrders();
       } catch (e) {
         if (mounted) {
           ElegantNotification.error(
@@ -97,7 +119,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         backgroundColor: Colors.redAccent,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: MongoDatabase.orderCollection.find(M.where.sortBy('orderDate', descending: true)).toList(),
+        future: MongoDatabase.orderCollection.find(m.where.sortBy('orderDate', descending: true)).toList(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -115,9 +137,6 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
-              final orderDate = order['orderDate'] as DateTime;
-              final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(orderDate);
-              
               String currentStatus = order['status'] ?? 'Pending';
               if (!statusMap.containsKey(currentStatus)) {
                 currentStatus = 'Pending';
@@ -125,69 +144,72 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, left: 16.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => OrderDetailScreen(order: order),
-                              ),
-                            ).then((_) {
-                              setState(() {});
-                            });
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Mã đơn: ${order['_id'].toHexString()}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Ngày đặt: $formattedDate\nTổng tiền: ${NumberFormat('#,##0').format(order['totalPrice'])} VNĐ',
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 150,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                child: ExpansionTile(
+                  title: Text('Đơn hàng: #${order['_id'].toHexString().substring(0, 8)}...'),
+                  subtitle: Text("Ngày: ${DateFormat('dd/MM/yyyy').format(order['orderDate'])} - Trạng thái: ${statusMap[currentStatus] ?? currentStatus}"),
+                  children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            DropdownButton<String>(
-                              value: currentStatus,
-                              items: statusMap.keys.map((String key) {
-                                return DropdownMenuItem<String>(
-                                  value: key,
-                                  child: Text(statusMap[key]!, style: const TextStyle(fontSize: 14)),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                if (newValue != null) {
-                                  _updateOrderStatus(order['_id'], newValue);
-                                }
-                              },
-                              underline: const SizedBox(),
+                            ...?(order['products'] as List?)?.map<Widget>((product) {
+                              return ListTile(
+                                leading: Image.network(product['imageUrl'] ?? '', width: 50, height: 50, fit: BoxFit.cover, errorBuilder: (c,e,s) => const Icon(Icons.image_not_supported)),
+                                title: Text(product['name'] ?? 'N/A'),
+                                subtitle: Text("Số lượng: ${product['quantity']}"),
+                              );
+                            }).toList(),
+                            const Divider(),
+                            InkWell(
+                              onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => OrderDetailScreen(order: order),
+                                    ),
+                                  ).then((_) {
+                                  _refreshOrders();
+                                  });
+                                },
+                              child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Text("Xem chi tiết đơn hàng...", style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline)),
+                              ),
                             ),
-                            // Nút để xóa đơn hàng
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                              tooltip: 'Xóa đơn hàng',
-                              onPressed: () => _deleteOrder(order['_id']),
+                            const Divider(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text("Cập nhật trạng thái:", style: TextStyle(fontWeight: FontWeight.bold)),
+                                DropdownButton<String>(
+                                  value: currentStatus,
+                                  items: statusMap.keys.map((String key) {
+                                    return DropdownMenuItem<String>(
+                                      value: key,
+                                      child: Text(statusMap[key]!),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null && newValue != currentStatus) {
+                                      _updateOrderStatus(order, newValue);
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                  tooltip: 'Xóa đơn hàng',
+                                  onPressed: () => _deleteOrder(order['_id']),
+                              ),
+                            )
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
               );
             },

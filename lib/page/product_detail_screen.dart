@@ -15,6 +15,7 @@ class ProductDetailScreen extends StatefulWidget {
   final String selectedAddress;
   final bool isFavorite;
   final VoidCallback onFavoriteToggle;
+  final double? salePrice; // <-- THÊM MỚI: Giá khuyến mãi (có thể null)
 
   const ProductDetailScreen({
     super.key,
@@ -24,6 +25,7 @@ class ProductDetailScreen extends StatefulWidget {
     required this.selectedAddress,
     required this.isFavorite,
     required this.onFavoriteToggle,
+    this.salePrice, // <-- THÊM MỚI
   });
 
   @override
@@ -33,8 +35,7 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _quantity = 1;
   int _cartTotalQuantity = 0;
-  final NumberFormat currencyFormatter =
-      NumberFormat('#,##0', 'vi_VN');
+  final NumberFormat currencyFormatter = NumberFormat('#,##0', 'vi_VN');
 
   static const Color primaryColor = Color(0xFFE57373);
   static const Color textColor = Color(0xFF333333);
@@ -43,9 +44,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   late Future<List<Map<String, dynamic>>> _reviewsFuture;
 
+  // --- THÊM MỚI: Xác định giá cuối cùng của sản phẩm ---
+  late double _finalPrice;
+
   @override
   void initState() {
     super.initState();
+    // Nếu có giá sale, dùng giá sale. Nếu không, dùng giá gốc.
+    _finalPrice = widget.salePrice ?? (widget.product['price'] as num).toDouble();
     _updateCartBadge();
     _reviewsFuture = MongoDatabase.getReviewsForProduct(widget.product['_id']);
   }
@@ -67,7 +73,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _handleAddToCart() async {
     final userId = widget.userDocument['_id'] as mongo.ObjectId;
-    await MongoDatabase.addToCart(userId, widget.product, quantity: _quantity);
+    
+    // Tạo một bản sao của sản phẩm và cập nhật giá nếu có giá sale
+    final productToAdd = Map<String, dynamic>.from(widget.product);
+    productToAdd['price'] = _finalPrice; // Luôn dùng giá cuối cùng
+
+    await MongoDatabase.addToCart(userId, productToAdd, quantity: _quantity);
     widget.onProductAdded();
     _updateCartBadge();
 
@@ -82,13 +93,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _handleBuyNow() {
-    final productPrice = (widget.product['price'] as num).toDouble();
-    final totalPrice = productPrice * _quantity;
+    final totalPrice = _finalPrice * _quantity;
     final buyNowItems = [{
       'productId': widget.product['_id'],
       'name': widget.product['name'],
       'imageUrl': widget.product['imageUrl'],
-      'price': productPrice,
+      'price': _finalPrice, // Dùng giá cuối cùng
       'quantity': _quantity,
     }];
 
@@ -133,7 +143,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     (widget.product['reviewCount'] as num?)?.toInt() ?? 0,
                   ),
                   const SizedBox(height: 24),
-                  _buildQuantitySelector((widget.product['price'] as num?)?.toDouble() ?? 0.0),
+                  // CẬP NHẬT: Không cần truyền giá vào đây nữa
+                  _buildQuantitySelector(), 
                   const SizedBox(height: 24),
                   _buildDivider(),
                   const SizedBox(height: 16),
@@ -184,8 +195,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               return const Center(child: CircularProgressIndicator(color: primaryColor));
             }
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              // ==== SỬA LỖI TẠI ĐÂY ====
-              // Xóa từ khóa 'const' vì secondaryTextColor không phải là hằng số
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Center(
@@ -275,8 +284,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       leading: Padding(
         padding: const EdgeInsets.all(8.0),
         child: CircleAvatar(
-          // ==== SỬA LỖI TẠI ĐÂY ====
-          backgroundColor: Colors.white.withAlpha(204), // Thay .withOpacity(0.8)
+          backgroundColor: Colors.white.withAlpha(204),
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: textColor),
             onPressed: () => Navigator.of(context).pop(),
@@ -287,8 +295,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: CircleAvatar(
-            // ==== SỬA LỖI TẠI ĐÂY ====
-            backgroundColor: Colors.white.withAlpha(204), // Thay .withOpacity(0.8)
+            backgroundColor: Colors.white.withAlpha(204),
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -386,17 +393,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       );
 
-  Widget _buildQuantitySelector(double price) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(children: [
-            _buildQuantityButton(icon: Icons.remove, onPressed: _decrementQuantity),
-            SizedBox(width: 50, child: Text('$_quantity', textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor))),
-            _buildQuantityButton(icon: Icons.add, onPressed: _incrementQuantity),
-          ]),
-          Text('${currencyFormatter.format(price * _quantity)} đ', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor)),
-        ],
-      );
+  // CẬP NHẬT WIDGET HIỂN THỊ GIÁ
+  Widget _buildQuantitySelector() {
+    final originalPrice = (widget.product['price'] as num?)?.toDouble() ?? 0.0;
+    final bool hasSale = widget.salePrice != null && widget.salePrice! < originalPrice;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(children: [
+          _buildQuantityButton(icon: Icons.remove, onPressed: _decrementQuantity),
+          SizedBox(width: 50, child: Text('$_quantity', textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor))),
+          _buildQuantityButton(icon: Icons.add, onPressed: _incrementQuantity),
+        ]),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text('${currencyFormatter.format(_finalPrice * _quantity)} đ', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor)),
+            if(hasSale)
+              Text('${currencyFormatter.format(originalPrice * _quantity)} đ', style: TextStyle(fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+          ],
+        )
+      ],
+    );
+  }
 
   Widget _buildQuantityButton({required IconData icon, required VoidCallback onPressed}) => Container(
         decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10)),

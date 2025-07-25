@@ -7,7 +7,10 @@ import 'package:doan_ltmobi/page/admin/promotion_management_screen.dart';
 import 'package:doan_ltmobi/page/admin/order_management_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
 import 'package:flutter/material.dart';
-import 'voucher_management_screen.dart'; // <-- THÊM MỚI
+import 'voucher_management_screen.dart';
+import 'statistics_screen.dart';
+import 'custom_order_management_screen.dart';
+import 'flash_sale_admin_screen.dart'; // <-- BƯỚC 1: IMPORT MÀN HÌNH MỚI
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -104,19 +107,6 @@ class AdminScreen extends StatelessWidget {
             ),
             _buildDashboardCard(
               context: context,
-              icon: Icons.campaign_outlined,
-              title: 'Quản lý khuyến mãi',
-              color: Colors.red,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const PromotionManagementScreen()),
-                );
-              },
-            ),
-            _buildDashboardCard(
-              context: context,
               icon: Icons.receipt_long_outlined,
               title: 'Quản lý đơn hàng',
               color: Colors.teal,
@@ -128,7 +118,7 @@ class AdminScreen extends StatelessWidget {
                 );
               },
             ),
-            _buildDashboardCard( // <-- THÊM CARD MỚI
+            _buildDashboardCard(
               context: context,
               icon: Icons.local_offer_outlined,
               title: 'Quản lý Voucher',
@@ -146,7 +136,49 @@ class AdminScreen extends StatelessWidget {
               title: 'Thống kê',
               color: Colors.purple,
               onTap: () {
-                // TODO: Thêm logic điều hướng đến trang thống kê
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const StatisticsScreen()),
+                );
+              },
+            ),
+            _buildDashboardCard(
+              context: context,
+              icon: Icons.cake_outlined,
+              title: 'Bánh đặt tùy chỉnh',
+              color: Colors.pink,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CustomOrderManagementScreen()),
+                );
+              },
+            ),
+            _buildDashboardCard(
+              context: context,
+              icon: Icons.campaign_outlined,
+              title: 'Quản lý khuyến mãi',
+              color: Colors.red,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const PromotionManagementScreen()),
+                );
+              },
+            ),
+            // --- BƯỚC 2: THÊM WIDGET MỚI TẠI ĐÂY ---
+            _buildDashboardCard(
+              context: context,
+              icon: Icons.flash_on_outlined,
+              title: 'Quản lý Flash Sale',
+              color: Colors.amber.shade700,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const FlashSaleAdminScreen()),
+                );
               },
             ),
           ],

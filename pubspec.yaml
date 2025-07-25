@@ -5,58 +5,63 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.2
+  sdk: '>=3.2.3 <4.0.0'
 
-dependencies:        
+dependencies:
   flutter:
     sdk: flutter
+    
+  # Icons and Fonts
   cupertino_icons: ^1.0.8
+  google_fonts: ^4.0.4
+
+  # State & Storage
   shared_preferences: ^2.2.3
+
+  # Database
   mongo_dart: ^0.10.5
-  image_picker: ^1.1.2
-  url_launcher: ^6.3.1
-  mailer: ^6.0.1
-  random_string: ^2.3.1
+
+  # UI & UX
+  smooth_page_indicator: ^1.1.0
   pinput: ^4.0.0
   elegant_notification: ^2.2.0
-  smooth_page_indicator: ^1.1.0
+  fl_chart: ^0.68.0
+  badges: ^3.1.2
+  flutter_timer_countdown: ^1.0.7 # <-- THÊM MỚI
 
-  flutter_launcher_icons: ^0.13.1
-
-  google_fonts: ^4.0.4
-  intl: ^0.19.0 
-
+  # Utilities
+  intl: ^0.19.0
+  image_picker: ^1.1.2
+  url_launcher: ^6.3.1
+  mailer: ^6.1.0
+  random_string: ^2.3.1
   crypto: ^3.0.3
-  
+  http: ^0.13.6
+
+  # Payment Integrations
+  flutter_paypal_payment: ^1.0.6
+  flutter_inappwebview: ^6.0.0
   qr_flutter: ^4.1.0
 
-  flutter_paypal_payment: ^1.0.6
-
-  flutter_inappwebview: ^6.0.0
-
-
-  
-
-  
-  # Google location / maps
+  # Google Location / Maps
   google_place: ^0.4.7
-  http: ^0.13.6
-geolocator: ^10.1.0
-geocoding: ^2.2.0
+  geolocator: ^12.0.0
+  geocoding: ^3.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.2
+  flutter_launcher_icons: ^0.13.1
 
-flutter:              # <-- CHỈ MỘT khối flutter
+flutter:
   uses-material-design: true
   assets:
     - assets/
-
+    - assets/image/
 
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  image_path: "assets/icon_app.png" # <-- Sửa lại đúng đường dẫn đến tệp icon của bạn
-  min_sdk_android: 21 # optional
+  image_path: "assets/icon_app.png"
+  min_sdk_android: 21

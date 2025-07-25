@@ -4,8 +4,10 @@ import 'dart:convert';
 import 'package:doan_ltmobi/page/change_password_screen.dart';
 import 'package:doan_ltmobi/page/edit_profile_screen.dart';
 import 'package:doan_ltmobi/page/login_screen.dart';
+import 'package:doan_ltmobi/page/membership_screen.dart';
 import 'package:doan_ltmobi/page/order_history_screen.dart';
 import 'package:doan_ltmobi/page/favorites_screen.dart';
+import 'package:doan_ltmobi/page/voucher_wallet_screen.dart'; // <-- THÊM IMPORT MỚI
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,8 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _loadImage() {
-    final String? base64String =
-        _currentUserDocument['profile_image_base64'];
+    final String? base64String = _currentUserDocument['profile_image_base64'];
     if (base64String != null && base64String.isNotEmpty) {
       try {
         final imageBytes = base64Decode(base64String);
@@ -70,29 +71,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    // Xóa email đã lưu
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_email');
     
     if (mounted) {
-        // Điều hướng về màn hình đăng nhập và xóa hết các màn hình cũ
-        Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-            (Route<dynamic> route) => false,
-        );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (Route<dynamic> route) => false,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final String email = _currentUserDocument["email"] ?? "N/A";
-    final String userName =
-        _currentUserDocument["user"] ?? email.split('@').first;
+    final String userName = _currentUserDocument["user"] ?? email.split('@').first;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hồ sơ của tôi',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Hồ sơ', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         automaticallyImplyLeading: false,
       ),
@@ -112,13 +109,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(userName,
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(userName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
-                        Text(email,
-                            style: TextStyle(
-                                fontSize: 16, color: Colors.grey.shade600)),
+                        Text(email, style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                       ],
                     ),
                   ),
@@ -132,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
+  
   Widget _buildProfileMenu(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -166,6 +159,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          _buildMenuItem(
+            icon: Icons.workspace_premium_outlined,
+            text: 'Hạng thành viên',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MembershipScreen(userDocument: _currentUserDocument),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+
+          // --- THÊM MỤC MỚI TẠI ĐÂY ---
+          _buildMenuItem(
+            icon: Icons.local_offer_outlined,
+            text: 'Kho Voucher',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => VoucherWalletScreen(userDocument: _currentUserDocument),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+
           _buildMenuItem(
             icon: Icons.favorite_border_outlined,
             text: 'Sản phẩm yêu thích',
@@ -190,8 +213,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(
                   builder: (context) => OrderHistoryScreen(
                     userId: _currentUserDocument['_id'] as mongo.ObjectId,
-                    // ==== SỬA LỖI TẠI ĐÂY ====
-                    // Thêm tham số userDocument còn thiếu
                     userDocument: _currentUserDocument,
                   ),
                 ),
@@ -225,20 +246,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMenuItem(
-      {required IconData icon,
-      required String text,
-      VoidCallback? onTap,
-      Color? textColor}) {
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String text,
+    VoidCallback? onTap,
+    Color? textColor,
+  }) {
     return ListTile(
       leading: Icon(icon, color: textColor ?? Colors.grey.shade700),
-      title: Text(text,
-          style: TextStyle(
-              color: textColor,
-              fontSize: 16,
-              fontWeight: FontWeight.w500)),
-      trailing: const Icon(Icons.arrow_forward_ios,
-          size: 16, color: Colors.grey),
+      title: Text(text, style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w500)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       onTap: onTap,
     );
   }
