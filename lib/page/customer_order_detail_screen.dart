@@ -137,7 +137,7 @@ class _CustomerOrderDetailScreenState extends State<CustomerOrderDetailScreen> {
                       ),
                       trailing: Text('${NumberFormat('#,##0').format(product['price'])} VNĐ'),
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ],

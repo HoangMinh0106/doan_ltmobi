@@ -251,7 +251,8 @@ class ProductScreenState extends State<ProductScreen> {
       itemCount: _categories.length + 1,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemBuilder: (context, index) {
-        if (index == 0) return Padding(padding: const EdgeInsets.symmetric(horizontal: 4.0), child: ChoiceChip(
+        if (index == 0) {
+          return Padding(padding: const EdgeInsets.symmetric(horizontal: 4.0), child: ChoiceChip(
           label: const Text('Tất cả'),
           selected: _selectedCategoryId == null,
           onSelected: (selected) => filterByCategory(null),
@@ -260,6 +261,7 @@ class ProductScreenState extends State<ProductScreen> {
           backgroundColor: Colors.white,
           shape: StadiumBorder(side: BorderSide(color: Colors.grey.shade300)),
         ));
+        }
         final category = _categories[index - 1];
         final categoryId = (category['_id'] as mongo.ObjectId).oid;
         final isSelected = _selectedCategoryId == categoryId;
