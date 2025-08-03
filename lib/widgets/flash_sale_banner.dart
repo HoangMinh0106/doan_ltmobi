@@ -33,10 +33,10 @@ class FlashSaleBanner extends StatelessWidget {
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.0),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
-            const Color(0xFFF06292), // Hồng đậm
-            const Color(0xFFD81B60), // Hồng rực rỡ
+            Color(0xFFF06292), // Hồng đậm
+            Color(0xFFD81B60), // Hồng rực rỡ
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

@@ -38,7 +38,7 @@ class _SuccessDialogState extends State<SuccessDialog> with SingleTickerProvider
     // Animation cho icon check
     _iconScaleAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Interval(0.2, 1.0, curve: Curves.elasticOut),
+      curve: const Interval(0.2, 1.0, curve: Curves.elasticOut),
     );
 
     _controller.forward();

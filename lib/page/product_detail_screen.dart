@@ -411,7 +411,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Text('${currencyFormatter.format(_finalPrice * _quantity)} đ', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primaryColor)),
             if(hasSale)
-              Text('${currencyFormatter.format(originalPrice * _quantity)} đ', style: TextStyle(fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough)),
+              Text('${currencyFormatter.format(originalPrice * _quantity)} đ', style: const TextStyle(fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough)),
           ],
         )
       ],

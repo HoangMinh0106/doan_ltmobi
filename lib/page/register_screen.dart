@@ -245,11 +245,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         floatingLabelStyle: const TextStyle(color: Colors.black),
          enabledBorder: OutlineInputBorder(
              borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
-             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)),
+             borderSide: const BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
               ),
             focusedBorder: OutlineInputBorder(
                borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
-               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
+               borderSide: const BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
               ),
       ),
     );
@@ -277,11 +277,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
          enabledBorder: OutlineInputBorder(
              borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
-             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)),
+             borderSide: const BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
               ),
             focusedBorder: OutlineInputBorder(
                borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
-               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
+               borderSide: const BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
               ),
       ),
     );
@@ -297,11 +297,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         floatingLabelStyle: const TextStyle(color: Colors.black),
          enabledBorder: OutlineInputBorder(
              borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
-             borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0)),
+             borderSide: const BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
               ),
             focusedBorder: OutlineInputBorder(
                borderRadius: BorderRadius.circular(35.0), // CHỈNH SỬA Ở ĐÂY
-               borderSide: BorderSide(color: const Color.fromARGB(255, 0, 0, 0), width: 2),
+               borderSide: const BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 2),
               ),
       ),
       value: _selectedGender,
