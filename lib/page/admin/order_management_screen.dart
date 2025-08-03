@@ -159,7 +159,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                 title: Text(product['name'] ?? 'N/A'),
                                 subtitle: Text("Số lượng: ${product['quantity']}"),
                               );
-                            }).toList(),
+                            }),
                             const Divider(),
                             InkWell(
                               onTap: () {

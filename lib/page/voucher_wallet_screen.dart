@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class VoucherWalletScreen extends StatefulWidget {
   final Map<String, dynamic> userDocument;

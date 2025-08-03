@@ -232,13 +232,13 @@ class _CustomCakeOrderScreenState extends State<CustomCakeOrderScreen> {
                     ? const CircularProgressIndicator()
                     : ElevatedButton(
                         onPressed: _submitForm,
-                        child: const Text('Gửi Yêu Cầu'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.pink,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                           textStyle: const TextStyle(fontSize: 18),
                         ),
+                        child: const Text('Gửi Yêu Cầu'),
                       ),
               )
             ],

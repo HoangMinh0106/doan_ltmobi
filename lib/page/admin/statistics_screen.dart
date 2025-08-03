@@ -334,7 +334,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   Text(statusMap[key]!),
                 ],
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

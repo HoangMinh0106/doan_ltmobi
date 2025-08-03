@@ -97,7 +97,7 @@ class _CustomOrderDetailScreenState extends State<CustomOrderDetailScreen> {
           children: [
             ElevatedButton(onPressed: () => _updateStatus('Đã báo giá'), child: const Text('Đã báo giá')),
             ElevatedButton(onPressed: () => _updateStatus('Đã xác nhận'), child: const Text('Đã xác nhận')),
-            ElevatedButton(onPressed: () => _updateStatus('Đã hủy'), child: const Text('Đã hủy'), style: ElevatedButton.styleFrom(backgroundColor: Colors.red)),
+            ElevatedButton(onPressed: () => _updateStatus('Đã hủy'), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Đã hủy')),
           ],
         )
       ],
