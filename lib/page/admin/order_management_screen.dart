@@ -1,5 +1,3 @@
-// lib/page/admin/order_management_screen.dart
-
 import 'package:doan_ltmobi/dpHelper/mongodb.dart';
 import 'package:doan_ltmobi/page/admin/order_detail_screen.dart';
 import 'package:elegant_notification/elegant_notification.dart';
@@ -29,12 +27,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
   Future<void> _updateOrderStatus(Map<String, dynamic> order, String newStatus) async {
     final String currentStatus = order['status'] ?? 'Pending';
-    
+
     // Cộng điểm tích lũy NẾU trạng thái MỚI là "Đã giao" và trạng thái CŨ KHÁC "Đã giao"
     if (newStatus == 'Delivered' && currentStatus != 'Delivered') {
       await MongoDatabase.addPointsForOrder(order);
     }
-    
+
     try {
       await MongoDatabase.orderCollection.update(
         m.where.id(order['_id']),
@@ -159,7 +157,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                 title: Text(product['name'] ?? 'N/A'),
                                 subtitle: Text("Số lượng: ${product['quantity']}"),
                               );
-                            }),
+                            }).toList(),
                             const Divider(),
                             InkWell(
                               onTap: () {
