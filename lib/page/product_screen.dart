@@ -279,7 +279,8 @@ class ProductScreenState extends State<ProductScreen> {
       itemCount: _categories.length + 1,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemBuilder: (context, index) {
-        if (index == 0) return Padding(padding: const EdgeInsets.symmetric(horizontal: 4.0), child: ChoiceChip(
+        if (index == 0) {
+          return Padding(padding: const EdgeInsets.symmetric(horizontal: 4.0), child: ChoiceChip(
           label: const Text('Tất cả'),
           selected: _selectedCategoryId == null,
           onSelected: (selected) => filterByCategory(null),
@@ -288,6 +289,7 @@ class ProductScreenState extends State<ProductScreen> {
           backgroundColor: Colors.white,
           shape: StadiumBorder(side: BorderSide(color: Colors.grey.shade300)),
         ));
+        }
         final category = _categories[index - 1];
         final categoryId = (category['_id'] as mongo.ObjectId).oid;
         final isSelected = _selectedCategoryId == categoryId;
@@ -332,22 +334,25 @@ class ProductScreenState extends State<ProductScreen> {
       ]));
 
   Widget _buildBodyContent() {
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: primaryColor));
-    if (_errorMessage.isNotEmpty)
+    }
+    if (_errorMessage.isNotEmpty) {
       return Center(
           child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Text(_errorMessage,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: secondaryTextColor, fontSize: 16))));
-    if (_filteredProducts.isEmpty)
+    }
+    if (_filteredProducts.isEmpty) {
       return Center(
           child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Text("Không tìm thấy sản phẩm phù hợp.",
                   textAlign: TextAlign.center,
                   style: TextStyle(color: secondaryTextColor, fontSize: 16))));
+    }
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

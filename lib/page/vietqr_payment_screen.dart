@@ -19,8 +19,8 @@ class VietQRPaymentScreen extends StatelessWidget {
   // =====> THÔNG TIN TÀI KHOẢN ĐÃ ĐƯỢC CẬP NHẬT Ở ĐÂY <=====
   // ==========================================================
   static const String bankBin = "970422"; // Mã BIN của MB Bank
-  static const String bankAccountNumber = "1417092003"; // Số tài khoản của bạn
-  static const String accountName = "HA MINH LUAN"; // Tên chủ tài khoản
+  static const String bankAccountNumber = "0903050953"; // Số tài khoản của bạn
+  static const String accountName = "Nguyễn Trương Hoàng Minh"; // Tên chủ tài khoản
 
   // Hàm tạo chuỗi VietQR
   String _buildVietQRString() {
