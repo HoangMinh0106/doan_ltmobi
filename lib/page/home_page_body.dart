@@ -92,7 +92,7 @@ class _HomePageBodyState extends State<HomePageBody> {
       }
 
       if (permission == LocationPermission.deniedForever) {
-        throw Exception('Quyền vị trí bị từ chối vĩnh viễn, không thể yêu cầu quyền.');
+        throw Exception('Quyền vị trí bị từ chối vĩnh viễn, không thể yêu cầu quyền!');
       }
 
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
